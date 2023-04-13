@@ -20,11 +20,11 @@ export class Expression implements Role {
     constructor() {}
 }
 
-export interface Module {
+export interface Module<ParserContext = any, EvalContext = any> {
     role: string;
     priority: number;
     name: string;
     tokenizeRules: TokenizeRule[];
-    parseRule: ParseRule;
-    evaluate: Evaluate;
+    parseRule: ParseRule<ParserContext>;
+    evaluate: Evaluate<EvalContext>;
 }

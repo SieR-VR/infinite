@@ -21,8 +21,16 @@ export function tokenize(input: TokenizerInput, options: TokenizerOptions = {}):
     const tokens: Token[] = [];
     
     let index = 0;
+    const whitespaceRegex = /^\s+/;
+
     while (index < inputString.length) {
         let matched = false;
+        const whitespaceMatch = whitespaceRegex.exec(inputString.slice(index));
+        if (whitespaceMatch && whitespaceMatch.index === 0) {
+            const [innerString] = whitespaceMatch;
+            index += innerString.length;
+        }
+
         for (const rule of tokenizeRules) {
             const { tokenType, regex } = rule;
             const match = regex.exec(inputString.slice(index));
@@ -34,6 +42,7 @@ export function tokenize(input: TokenizerInput, options: TokenizerOptions = {}):
                 break;
             }
         }
+
         if (!matched) {
             throw new Error(`Unexpected token at ${fileName}:${index}`);
         }

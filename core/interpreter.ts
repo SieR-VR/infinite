@@ -2,27 +2,28 @@ import { Node } from "./parser";
 import { Module } from "./module";
 
 export interface InterpreterInput {
-    node: Node;
+    nodes: Node[];
     fileName: string;
 }
 
-export interface InterpreterOptions {
-    modules?: Module[];
+export interface InterpreterOptions<Context = undefined> {
+    modules?: Module<Context>[];
+    startContext: Context;
 }
 
-export type EvaluateGetter = (name: string) => Evaluate;
-export type Evaluate = (node: Node, getEvaluate: EvaluateGetter) => any;
+export type EvaluateGetter<Context> = (name: string) => Evaluate<Context>;
+export type Evaluate<Context> = (node: Node, getEvaluate: EvaluateGetter<Context>, context: Context) => any;
 
-export function interpret(input: InterpreterInput, options: InterpreterOptions): any {
-    const { node, fileName } = input;
-    const { modules = [] } = options;
+export function interpret<Context = undefined>(input: InterpreterInput, options: InterpreterOptions<Context>): any {
+    const { nodes, fileName } = input;
+    const { modules = [], startContext } = options;
 
-    const evaluateMap = new Map<string, (node: Node, getEvaluate: EvaluateGetter) => any>();
+    const evaluateMap = new Map<string, Evaluate<Context>>();
     for (const module of modules) {
         evaluateMap.set(module.name, module.evaluate);
     }
 
-    const getEvaluate: EvaluateGetter = (name) => {
+    const getEvaluate: EvaluateGetter<Context> = (name) => {
         const evaluate = evaluateMap.get(name);
         if (!evaluate) {
             throw new Error(`No evaluate function for module ${name}`);
@@ -30,5 +31,7 @@ export function interpret(input: InterpreterInput, options: InterpreterOptions):
         return evaluate;
     }
 
-    return getEvaluate(node.nodeType)(node, getEvaluate);
+    return nodes.map(node => {
+        return getEvaluate(node.nodeType)(node, getEvaluate, startContext);
+    });
 }
