@@ -1,7 +1,14 @@
 import { Ok, Err } from "ts-features";
 import { Module } from "../../core/module";
+import { CContext, LLVMContext } from ".";
 
-const NumberModule: Module = {
+export interface NumberNode {
+    nodeType: 'number';
+    children: [];
+    value: number;
+}
+
+const NumberModule: Module<CContext, LLVMContext, NumberNode> = {
     role: 'expression',
     priority: 0,
     name: 'number',
@@ -24,8 +31,8 @@ const NumberModule: Module = {
             index: index + 1
         });
     },
-    evaluate(node, evaluate, startContext) {
-        return node.value;
+    evaluate(node, getEvaluate, context) {
+        return context.builder.getInt32(node.value);
     }
 }
 

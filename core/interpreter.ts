@@ -6,13 +6,13 @@ export interface InterpreterInput {
     fileName: string;
 }
 
-export interface InterpreterOptions<Context = undefined> {
-    modules?: Module<Context>[];
-    startContext: Context;
+export interface InterpreterOptions<InterpreterContext = undefined> {
+    modules?: Module<any, InterpreterContext, any>[];
+    startContext: InterpreterContext;
 }
 
-export type EvaluateGetter<Context> = (name: string) => Evaluate<Context>;
-export type Evaluate<Context> = (node: Node, getEvaluate: EvaluateGetter<Context>, context: Context) => any;
+export type EvaluateGetter<Context, NodeType extends Node = Node> = (name: string) => Evaluate<Context, NodeType>;
+export type Evaluate<Context, NodeType extends Node = Node> = (node: NodeType, getEvaluate: EvaluateGetter<Context, Node>, context: Context) => any;
 
 export function interpret<Context = undefined>(input: InterpreterInput, options: InterpreterOptions<Context>): any {
     const { nodes, fileName } = input;

@@ -6,7 +6,7 @@ export interface TokenizerInput {
 }
 
 export interface TokenizerOptions {
-    modules?: Module[];
+    modules?: Module<any, any, any>[];
 }
 
 export interface Token {

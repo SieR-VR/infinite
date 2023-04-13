@@ -3,9 +3,15 @@ import { Ok, Err } from "ts-features";
 import { Module } from "../../core/module";
 import { Node } from "../../core/parser";
 
-import { CContext, CVariable } from ".";
+import { CContext, CVariable, LLVMContext } from ".";
 
-const DefinitionModule: Module<CContext> = {
+export interface DefinitionNode {
+    nodeType: 'definition';
+    variables: CVariable[];
+    children: Node[];
+}
+
+const DefinitionModule: Module<CContext, LLVMContext, DefinitionNode> = {
     role: 'statement',
     priority: 10,
     name: 'definition',
@@ -20,7 +26,7 @@ const DefinitionModule: Module<CContext> = {
         let currentIndex = index;
         const type = getRule('type')(tokens, currentIndex, getRule, context);
         if (type.is_err()) {
-            return type;
+            return Err(type.unwrap_err());
         }
         const typeChecked = type.unwrap();
         currentIndex = typeChecked.index;
@@ -29,7 +35,7 @@ const DefinitionModule: Module<CContext> = {
         while (tokens[currentIndex].tokenType === 'identifier') {
             const name = getRule('identifier')(tokens, currentIndex, getRule, context);
             if (name.is_err()) {
-                return name;
+                return Err(name.unwrap_err());
             }
             const nameChecked = name.unwrap();
             currentIndex = nameChecked.index;
@@ -40,7 +46,7 @@ const DefinitionModule: Module<CContext> = {
 
                 const valueNode = getRule('expression')(tokens, currentIndex, getRule, context);
                 if (valueNode.is_err()) {
-                    return valueNode;
+                    return Err(valueNode.unwrap_err());
                 }
                 const valueNodeChecked = valueNode.unwrap();
                 currentIndex = valueNodeChecked.index;
@@ -75,7 +81,17 @@ const DefinitionModule: Module<CContext> = {
             index: nextIndex
         });
     },
-    evaluate(node, context) {}
+    evaluate(node, getEvaluate, context) {
+        for (const variable of node.variables) {
+            const type = getEvaluate(variable.type.nodeType)(variable.type, getEvaluate, context);
+            const name = getEvaluate(variable.name.nodeType)(variable.name, getEvaluate, context);
+
+            const alloca = context.builder.CreateAlloca(type, null, name);
+            const initialValue = variable.initialValue && getEvaluate(variable.initialValue.nodeType)(variable.initialValue, getEvaluate, context);
+
+            context.builder.CreateStore(initialValue || context.builder.getInt32(0), alloca);
+        }
+    }
 }
 
 export default DefinitionModule;

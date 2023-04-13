@@ -9,7 +9,7 @@ export interface ParserInput {
 }
 
 export interface ParserOptions<ParserContext = any> {
-    modules?: Module[];
+    modules?: Module<any, any, any>[];
     context: ParserContext;
 }
 
@@ -20,16 +20,16 @@ export interface Node {
     children: Node[];
 }
 
-export type ParseRule<ParserContext> = (
+export type ParseRule<ParserContext, NodeType extends Node> = (
     tokens: Token[],
     index: number,
     getRule: ParseRuleGetter<ParserContext>,
     context: ParserContext
-) => Result<ParseRuleResult, string>;
-export type ParseRuleGetter<ParserContext> = (role: string, priorityCondition?: (p: Module) => boolean) => ParseRule<ParserContext>;
+) => Result<ParseRuleResult<NodeType>, string>;
+export type ParseRuleGetter<ParserContext> = (role: string, priorityCondition?: (p: Module) => boolean) => ParseRule<ParserContext, Node>;
 
-export interface ParseRuleResult {
-    node: Node;
+export interface ParseRuleResult<NodeType extends Node> {
+    node: NodeType;
     index: number;
 }
 
@@ -51,7 +51,7 @@ export function parse<ParserContext = any>(input: ParserInput, options: ParserOp
             rawMap.set(role, rules);
         }
 
-        const map = new Map<string, (condition: (module: Module) => boolean) => ParseRule<ParserContext>>();
+        const map = new Map<string, (condition: (module: Module) => boolean) => ParseRule<ParserContext, Node>>();
         for (const [role, modules] of rawMap) {
             map.set(role, (condition: (module: Module) => boolean) => (tokens, index, getRule) => {
                 const filteredModules = modules.filter(condition);
@@ -69,7 +69,7 @@ export function parse<ParserContext = any>(input: ParserInput, options: ParserOp
     })();
 
 
-    const getRule = (role: string, condition?: (module: Module) => boolean): ParseRule<ParserContext> => {
+    const getRule = (role: string, condition?: (module: Module) => boolean): ParseRule<ParserContext, Node> => {
         const rule = getRuleMap.get(role);
         if (!rule) {
             throw new Error(`Rule for role ${role} not found`);
@@ -91,8 +91,6 @@ export function parse<ParserContext = any>(input: ParserInput, options: ParserOp
                 matched = true;
                 break;
             }
-
-            console.log(result.unwrap_err());
         }
         if (!matched) {
             throw new Error(`Unexpected token ${tokens[index].innerString} at ${fileName}:${index}`);

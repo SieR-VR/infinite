@@ -1,9 +1,15 @@
 import { Ok, Err } from "ts-features";
 
 import { Module } from "../../core/module";
-import { CContext, CVariable } from ".";
+import { CContext, CVariable, LLVMContext } from ".";
 
-const IdentifierModule: Module<CContext> = {
+export interface IdentifierNode {
+    nodeType: 'identifier';
+    name: string;
+    children: [];
+}
+
+const IdentifierModule: Module<CContext, LLVMContext, IdentifierNode> = {
     role: 'identifier',
     priority: 100,
     name: 'identifier',
@@ -25,7 +31,9 @@ const IdentifierModule: Module<CContext> = {
             index: index + 1,
         });
     },
-    evaluate(node, context) { }
+    evaluate(node, context) { 
+        return node.name;
+    }
 }
 
 export default IdentifierModule;
