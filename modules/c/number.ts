@@ -10,7 +10,7 @@ export interface NumberNode {
 
 const NumberModule: Module<CContext, LLVMContext, NumberNode> = {
     role: 'expression',
-    priority: 0,
+    priority: 100,
     name: 'number',
     tokenizeRules: [{
         regex: /^\d+/,

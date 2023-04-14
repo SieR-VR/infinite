@@ -24,7 +24,7 @@ export type ParseRule<ParserContext, NodeType extends Node> = (
     tokens: Token[],
     index: number,
     getRule: ParseRuleGetter<ParserContext>,
-    context: ParserContext
+    context?: ParserContext
 ) => Result<ParseRuleResult<NodeType>, string>;
 export type ParseRuleGetter<ParserContext> = (role: string, priorityCondition?: (p: Module) => boolean) => ParseRule<ParserContext, Node>;
 
@@ -37,10 +37,12 @@ export function parse<ParserContext = any>(input: ParserInput, options: ParserOp
     const { tokens, fileName } = input;
     const { modules = [], context } = options;
 
-    const topLevelParseRules = modules.filter(module => module.role === "statement").map(module => module.parseRule);
+    const topLevelParseRules = modules
+        // .filter(module => module.role === "statement")
+        .map(module => module.parseRule);
     const nodes: Node[] = [];
 
-    const modulesSortedByPriority = modules.sort((a, b) => b.priority - a.priority);
+    const modulesSortedByPriority = modules.sort((a, b) => a.priority - b.priority);
     const getRuleMap = (() => {
         const rawMap = new Map<string, Module[]>();
 
@@ -61,7 +63,7 @@ export function parse<ParserContext = any>(input: ParserInput, options: ParserOp
                         return result;
                     }
                 }
-                return Err(`Unexpected token at ${fileName}:${index}`);
+                return Err(`Unexpected token ${JSON.stringify(tokens[index])} at ${fileName}:${index}`);
             });
         }
 
@@ -80,7 +82,6 @@ export function parse<ParserContext = any>(input: ParserInput, options: ParserOp
     let index = 0;
     while (index < tokens.length) {
         let matched = false;
-        let error = "";
 
         for (const rule of topLevelParseRules) {
             const result = rule(tokens, index, getRule, context);

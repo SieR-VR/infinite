@@ -1,19 +1,19 @@
 import { Ok, Err } from "ts-features";
 
 import { Module } from "../../core/module";
-import { CContext, CVariable, LLVMContext } from ".";
+import { CContext, LLVMContext } from ".";
 
 import { IdentifierNode } from "./identifier";
 
 export interface IdentifierExpressionNode {
-    nodeType: 'identifier';
+    nodeType: 'identifierExpression';
     name: IdentifierNode;
     children: [IdentifierNode];
 }
 
 const IdentifierExpressionModule: Module<CContext, LLVMContext, IdentifierExpressionNode> = {
     role: 'expression',
-    priority: 0,
+    priority: 100,
     name: 'identifierExpression',
     tokenizeRules: [],
     parseRule(tokens, index, getRule, context) {
@@ -25,7 +25,7 @@ const IdentifierExpressionModule: Module<CContext, LLVMContext, IdentifierExpres
 
         return Ok({
             node: {
-                nodeType: 'identifier',
+                nodeType: 'identifierExpression',
                 name: nameChecked,
                 children: [nameChecked],
             },

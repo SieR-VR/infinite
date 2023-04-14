@@ -2,59 +2,106 @@ import { Ok, Err } from "ts-features";
 
 import { Module } from "../../core/module";
 import { Node } from "../../core/parser";
+import { Token } from "../../core/tokenizer";
 
-import { CContext, CVariable, LLVMContext } from ".";
+import { CContext, LLVMContext } from ".";
 
 export interface BinaryNode {
-    nodeType: `binary${string}`;
+    nodeType: 'binary';
     operator: string;
     left: Node;
     right: Node;
     children: Node[];
 }
 
-const Binary4Module: Module<CContext, LLVMContext, BinaryNode> = {
+const binaryOperators = {
+    "4": ['plusSign', 'minusSign'],
+    "3": ['asterisk', 'slash', 'percent'],
+}
+
+const BinaryModule: Module<CContext, LLVMContext, BinaryNode> = {
     role: 'expression',
-    priority: 4,
-    name: 'binary4',
+    priority: 10,
+    name: 'binary',
     tokenizeRules: [{
         tokenType: 'plusSign',
         regex: /^\+/,
     }, {
         tokenType: 'minusSign',
         regex: /^\-/,
+    }, {
+        tokenType: 'asterisk',
+        regex: /^\*/,
+    }, {
+        tokenType: 'slash',
+        regex: /^\//,
+    }, {
+        tokenType: 'percent',
+        regex: /^\%/,
     }],
     parseRule(tokens, index, getRule, context) {
         let currentIndex = index;
-        
-        const left = getRule('expression', (m) => m.priority < 4)(tokens, currentIndex, getRule, context);
-        if (left.is_err()) {
-            return Err(left.unwrap_err());
-        }
-        const leftChecked = left.unwrap();
-        currentIndex = leftChecked.index;
+        let nodeList: Node[] = [];
+        let operatorList: Token[] = [];
 
-        const operator = tokens[currentIndex];
-        if (['plusSign', 'minusSign'].indexOf(operator.tokenType) === -1) {
-            return Err(`Expected plus or minus operator at ${currentIndex}`);
-        }
-        currentIndex++;
+        while (currentIndex < tokens.length) {
+            const token = tokens[currentIndex];
+            
+            if (['plusSign', 'minusSign', 'asterisk', 'slash', 'percent'].includes(token.tokenType)) {
+                operatorList.push(token);
+                currentIndex++;
 
-        const right = getRule('expression', (m) => m.priority < 4)(tokens, currentIndex, getRule, context);
-        if (right.is_err()) {
-            return Err(right.unwrap_err());
+                continue;
+            } else {
+                const checked = getRule('expression', (m) => m.name !== 'binary')(tokens, currentIndex, getRule, context);
+                if (checked.is_err()) {
+                    break;
+                }
+                const { node, index } = checked.unwrap();
+                nodeList.push(node);
+                currentIndex = index;
+
+                continue;
+            }
         }
-        const rightChecked = right.unwrap();
+
+        if (nodeList.length === 0) {
+            return Err('');
+        }
+
+        Object.keys(binaryOperators).sort((a, b) => parseInt(a) - parseInt(b)).forEach((priority) => {
+            const operators = binaryOperators[priority as keyof typeof binaryOperators];
+            let operatorLength = operatorList.length;
+
+            for (let i = 0; i < operatorLength; i++) {
+                const operator = operatorList[i];
+                if (operators.includes(operator.tokenType)) {
+                    const left = nodeList[i];
+                    const right = nodeList[i + 1];
+                    nodeList.splice(i, 2, {
+                        nodeType: 'binary',
+                        operator: operator.tokenType,
+                        left,
+                        right,
+                        children: [left, right],
+                    } as Node);
+
+                    operatorList.splice(i, 1);
+                    i--;
+                    operatorLength--;
+                }
+            }
+        });
+
+        if (nodeList.length !== 1 || operatorList.length !== 0) {
+            throw new Error('Invalid binary expression');
+        }
+
+        const [binaryNode] = nodeList;
 
         return Ok({
-            node: {
-                nodeType: 'binary4',
-                operator: operator.tokenType,
-                left: leftChecked.node,
-                right: rightChecked.node,
-                children: [leftChecked.node, rightChecked.node],
-            },
-            index: rightChecked.index
+            node: binaryNode as BinaryNode,
+            index: currentIndex
         });
     },
     evaluate(node, getEvaluate, context) {
@@ -65,68 +112,11 @@ const Binary4Module: Module<CContext, LLVMContext, BinaryNode> = {
             return context.builder.CreateAdd(left, right);
         } else if (node.operator === 'minusSign') {
             return context.builder.CreateSub(left, right);
-        } else {
-            throw new Error(`Unknown operator ${node.operator}`);
-        }
-    }
-}
-
-const Binary3Module: Module<CContext, LLVMContext, BinaryNode> = {
-    role: 'expression',
-    priority: 3,
-    name: 'binary3',
-    tokenizeRules: [{
-        tokenType: 'asterisk',
-        regex: /^\*/,
-    }, {
-        tokenType: 'forwardSlash',
-        regex: /^\//,
-    },  {
-        tokenType: 'percentSign',
-        regex: /^\%/,
-    }],
-    parseRule(tokens, index, getRule, context) {
-        let currentIndex = index;
-
-        const left = getRule('expression', (m) => m.priority < 3)(tokens, currentIndex, getRule, context);
-        if (left.is_err()) {
-            return Err(left.unwrap_err());
-        }
-        const leftChecked = left.unwrap();
-        currentIndex = leftChecked.index;
-
-        const operator = tokens[currentIndex];
-        if (['asterisk', 'forwardSlash', 'percentSign'].indexOf(operator.tokenType) === -1) {
-            return Err(`Expected multiply, divide, or modulus operator at ${currentIndex}`);
-        }
-        currentIndex++;
-
-        const right = getRule('expression', (m) => m.priority < 3)(tokens, currentIndex, getRule, context);
-        if (right.is_err()) {
-            return Err(right.unwrap_err());
-        }
-        const rightChecked = right.unwrap();
-
-        return Ok({
-            node: {
-                nodeType: 'binary3',
-                operator: operator.tokenType,
-                left: leftChecked.node,
-                right: rightChecked.node,
-                children: [leftChecked.node, rightChecked.node],
-            },
-            index: rightChecked.index
-        });
-    },
-    evaluate(node, getEvaluate, context) {
-        const left = getEvaluate(node.left.nodeType)(node.left, getEvaluate, context);
-        const right = getEvaluate(node.right.nodeType)(node.right, getEvaluate, context);
-
-        if (node.operator === 'asterisk') {
+        } else if (node.operator === 'asterisk') {
             return context.builder.CreateMul(left, right);
-        } else if (node.operator === 'forwardSlash') {
+        } else if (node.operator === 'slash') {
             return context.builder.CreateSDiv(left, right);
-        } else if (node.operator === 'percentSign') {
+        } else if (node.operator === 'percent') {
             return context.builder.CreateSRem(left, right);
         } else {
             throw new Error(`Unknown operator ${node.operator}`);
@@ -134,5 +124,5 @@ const Binary3Module: Module<CContext, LLVMContext, BinaryNode> = {
     }
 }
 
-export default [Binary4Module, Binary3Module];
+export default BinaryModule;
 

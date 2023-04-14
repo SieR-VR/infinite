@@ -50,7 +50,6 @@ const DefinitionModule: Module<CContext, LLVMContext, DefinitionNode> = {
                 }
                 const valueNodeChecked = valueNode.unwrap();
                 currentIndex = valueNodeChecked.index;
-
                 initialValue = valueNodeChecked.node;
             }
 

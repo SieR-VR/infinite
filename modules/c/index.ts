@@ -33,7 +33,7 @@ export interface CVariable {
 }
 
 export const CModules = [
-    ...BinaryModule,
+    BinaryModule,
     BlockModule,
     CallModule,
     DefinitionModule,
