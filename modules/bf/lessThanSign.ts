@@ -11,20 +11,10 @@ const LessThanSignModule: Module<BFContext> = {
         regex: /^</,
         tokenType: 'lessThanSign'
     }],
-    parseRule(tokens, index, getRule) {
-        const { tokenType } = tokens[index];
-        if (tokenType !== 'lessThanSign') {
-            return Err(`Unexpected token ${tokenType}`);
-        }
-
-        return Ok({
-            node: {
-                nodeType: 'lessThanSign',
-                children: []
-            },
-            index: index + 1
-        });
-    },
+    parseRuleList: [{
+        role: 'lessThanSign',
+        isToken: true,
+    }],
     evaluate(node, getEvaluate, startContext) {
         startContext.pointer--;
     }

@@ -11,20 +11,10 @@ const PlusSignModule: Module<BFContext> = {
         regex: /^\+/,
         tokenType: 'plusSign'
     }],
-    parseRule(tokens, index, getRule) {
-        const { tokenType } = tokens[index];
-        if (tokenType !== 'plusSign') {
-            return Err(`Unexpected token ${tokenType}`);
-        }
-
-        return Ok({
-            node: {
-                nodeType: 'plusSign',
-                children: []
-            },
-            index: index + 1
-        });
-    },
+    parseRuleList: [{
+        role: 'plusSign',
+        isToken: true,
+    }],
     evaluate(node, getEvaluate, startContext) {
         startContext.memory[startContext.pointer]++;
     }

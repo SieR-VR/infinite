@@ -1,4 +1,4 @@
-import { Node, ParseRule } from "./parser";
+import { Node, ParseRule, ParseRuleElement } from "./parser";
 import { Evaluate } from "./interpreter";
 
 export interface TokenizeRule {
@@ -11,6 +11,7 @@ export interface Module<ParserContext = any, EvalContext = any, NodeType extends
     priority: number;
     name: string;
     tokenizeRules: TokenizeRule[];
-    parseRule: ParseRule<ParserContext, NodeType>;
+    parseRuleList?: ParseRuleElement[];
+    parseRule?: ParseRule<ParserContext, NodeType>;
     evaluate: Evaluate<EvalContext, NodeType>;
 }

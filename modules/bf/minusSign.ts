@@ -11,20 +11,10 @@ const MinusSignModule: Module<BFContext> = {
         regex: /^\-/,
         tokenType: 'minusSign'
     }],
-    parseRule(tokens, index, getRule) {
-        const { tokenType } = tokens[index];
-        if (tokenType !== 'minusSign') {
-            return Err(`Unexpected token ${tokenType}`);
-        }
-
-        return Ok({
-            node: {
-                nodeType: 'minusSign',
-                children: []
-            },
-            index: index + 1
-        });
-    },
+    parseRuleList: [{
+        role: 'minusSign',
+        isToken: true,
+    }],
     evaluate(node, getEvaluate, startContext) {
         startContext.memory[startContext.pointer]--;
     }

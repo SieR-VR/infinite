@@ -11,20 +11,10 @@ const BiggerThanSignModule: Module<BFContext> = {
         regex: /^>/,
         tokenType: 'biggerThanSign'
     }],
-    parseRule(tokens, index, getRule) {
-        const { tokenType } = tokens[index];
-        if (tokenType !== 'biggerThanSign') {
-            return Err(`Unexpected token ${tokenType}`);
-        }
-
-        return Ok({
-            node: {
-                nodeType: 'biggerThanSign',
-                children: []
-            },
-            index: index + 1
-        });
-    },
+    parseRuleList: [{
+        role: 'biggerThanSign',
+        isToken: true,
+    }],
     evaluate(node, getEvaluate, startContext) {
         startContext.pointer++;
     }

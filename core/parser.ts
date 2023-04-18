@@ -1,4 +1,4 @@
-import { Result, Err } from "ts-features";
+import { Result, Ok,  Err } from "ts-features";
 
 import { Module } from "./module";
 import { Token } from "./tokenizer";
@@ -10,14 +10,22 @@ export interface ParserInput {
 
 export interface ParserOptions<ParserContext = any> {
     modules?: Module<any, any, any>[];
-    context: ParserContext;
+    context?: ParserContext;
 }
 
 export interface Node {
     nodeType: string;
-    value?: any;
-
     children: Node[];
+    value?: any;
+}
+
+export interface ParseRuleElement {
+    role: string;
+    key?: string;
+    condition?: (p: Module) => boolean;
+    isToken?: boolean;
+    isOptional?: boolean;
+    isRepeatable?: boolean;
 }
 
 export type ParseRule<ParserContext, NodeType extends Node> = (
@@ -35,7 +43,81 @@ export interface ParseRuleResult<NodeType extends Node> {
 
 export function parse<ParserContext = any>(input: ParserInput, options: ParserOptions<ParserContext>): Node[] {
     const { tokens, fileName } = input;
-    const { modules = [], context } = options;
+    const { modules: modulesRaw = [], context } = options;
+
+    const modules = modulesRaw.map(module => {
+        const { parseRuleList } = module;
+        if (parseRuleList) {
+            const parseRuleElements = parseRuleList;
+            const parseRuleFunction: ParseRule<ParserContext, Node> = (tokens: Token[], index: number, getRule: ParseRuleGetter<ParserContext>, context?: ParserContext) => {
+                const node: Node = {
+                    nodeType: module.name,
+                    children: [],
+                };
+                let nextIndex = index;
+
+                for (const parseRuleElement of parseRuleElements) {
+                    const { role, key, condition, isToken, isOptional, isRepeatable } = parseRuleElement;
+
+                    if (isToken) {
+                        if (tokens[nextIndex].tokenType !== role) {
+                            if (isOptional) {
+                                continue;
+                            }
+                            return Err(`Unexpected token ${JSON.stringify(tokens[nextIndex])} at ${fileName}:${nextIndex}`);
+                        }
+                        else {
+                            nextIndex++;
+                            continue;
+                        }
+                    }
+
+                    if (isRepeatable) {
+                        const results: Node[] = [];
+
+                        while (true) {
+                            const result = getRule(role, condition)(tokens, nextIndex, getRule, context);
+                            if (result.is_ok()) {
+                                const { node: childNode, index: childIndex } = result.unwrap();
+                                node.children.push(childNode);
+                                results.push(childNode);
+                                nextIndex = childIndex;
+                            }
+                            else {
+                                break;
+                            }
+                        }
+
+                        if (!isOptional && results.length === 0) {
+                            return Err(`Unexpected token ${JSON.stringify(tokens[nextIndex])} at ${fileName}:${nextIndex}`);
+                        }
+
+                        node[key] = results;
+                        continue;
+                    }
+
+                    const result = getRule(role, condition)(tokens, nextIndex, getRule, context);
+                    if (result.is_ok()) {
+                        const { node: childNode, index: childIndex } = result.unwrap();
+                        node.children.push(childNode);
+                        node[key] = childNode;
+                        nextIndex = childIndex;
+                    }
+                    else if (isOptional) {
+                        continue;
+                    }
+                }
+
+                return Ok({ node, index: nextIndex });
+            };
+            return {
+                ...module,
+                parseRule: parseRuleFunction,
+            };
+        }
+
+        return module;
+    });
 
     const topLevelParseRules = modules
         // .filter(module => module.role === "statement")

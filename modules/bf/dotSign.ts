@@ -11,20 +11,10 @@ const DotSignModule: Module<BFContext> = {
         regex: /^\./,
         tokenType: 'dotSign'
     }],
-    parseRule(tokens, index, getRule) {
-        const { tokenType } = tokens[index];
-        if (tokenType !== 'dotSign') {
-            return Err(`Unexpected token ${tokenType}`);
-        }
-
-        return Ok({
-            node: {
-                nodeType: 'dotSign',
-                children: []
-            },
-            index: index + 1
-        });
-    },
+    parseRuleList: [{
+        role: 'dotSign',
+        isToken: true,
+    }],
     evaluate(node, getEvaluate, startContext) {
         startContext.buffer += String.fromCharCode(startContext.memory[startContext.pointer]);
     }

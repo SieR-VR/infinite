@@ -3,6 +3,10 @@
         "target": "ESNext",
         "module": "commonjs",
         "esModuleInterop": true,
-        "noEmit": true
+        "noEmit": true,
+        "paths": {
+            "core/*": ["./core/*"],
+            "@/*": ["./*"],
+        }
     }
 }
