@@ -1,11 +1,11 @@
 import * as fs from "fs";
 import llvm from "llvm-bindings";
 
-import { tokenize, TokenizerInput, TokenizerOptions } from "./core/tokenizer";
-import { parse, ParserInput, ParserOptions } from "./core/parser";
-import { interpret, InterpreterInput, InterpreterOptions } from "./core/interpreter";
+import { tokenize, TokenizerInput, TokenizerOptions } from "core/tokenizer";
+import { parse, ParserInput, ParserOptions } from "core/parser";
+import { interpret, InterpreterInput, InterpreterOptions } from "core/interpreter";
 
-import { CModules, CContext, LLVMContext } from "./modules/c";
+import { CModules, CContext, LLVMContext } from "@/modules/c";
 
 const modules = CModules;
 

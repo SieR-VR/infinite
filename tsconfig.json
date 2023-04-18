@@ -3,10 +3,11 @@
         "target": "ESNext",
         "module": "commonjs",
         "esModuleInterop": true,
-        "noEmit": true,
         "paths": {
             "core/*": ["./core/*"],
             "@/*": ["./*"],
-        }
+        },
+        "declaration": true,
+        "outDir": "./lib",
     }
 }
