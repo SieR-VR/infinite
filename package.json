@@ -23,7 +23,6 @@
   },
   "devDependencies": {
     "@types/node": "^18.15.11",
-    "llvm-bindings": "^0.4.2",
     "tsconfig-paths": "^4.2.0"
   }
 }

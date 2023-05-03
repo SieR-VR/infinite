@@ -1,36 +1,27 @@
 import * as fs from "fs";
 import * as path from "path";
 
-import { tokenize, TokenizerInput, TokenizerOptions } from "core/tokenizer";
-import { parse, ParserInput, ParserOptions } from "core/parser";
-import { interpret, InterpreterInput, InterpreterOptions } from "core/interpreter";
+import { tokenize, TokenizerInput } from "core/tokenizer";
+import { parse, ParserInput } from "core/parser";
 
-import { BFContext, BFModules, makeInitialContext } from "@/modules/bf";
+(async() => {
+    const input: TokenizerInput = {
+        fileName: 'test',
+        input: fs.readFileSync(path.join(__dirname, 'test.bf'), 'utf8')
+    };
+    
+    const { default: tokenizers }  = await import("@/modules/tokens/bf");
+    const tokens = tokenize(input, tokenizers);
 
-const modules = BFModules;
+    const parserInput: ParserInput = {
+        fileName: 'test',
+        tokens,
+    };
 
-const input: TokenizerInput = {
-    fileName: 'test',
-    input: fs.readFileSync(path.join(__dirname, 'test.bf'), 'utf8')
-};
-const tokenizerOptions: TokenizerOptions = { modules };
-const tokens = tokenize(input, tokenizerOptions);
+    const parsers = await Promise.all(fs.readdirSync('modules/parsers/bf').map(async (file) => {
+        const { default: parser } = await import(`@/modules/parsers/bf/${file}`);
+        return parser;
+    }));
+    const ast = parse(parserInput, parsers, () => {});
+})();
 
-const parserInput: ParserInput = {
-    fileName: 'test',
-    tokens
-};
-const parserOptions: ParserOptions = { modules };
-const parseResult = parse(parserInput, parserOptions);
-
-const interpreterInput: InterpreterInput = {
-    fileName: 'test',
-    nodes: parseResult
-};
-const interpreterOptions: InterpreterOptions<BFContext> = {
-    modules,
-    startContext: makeInitialContext(256)
-};
-interpret(interpreterInput, interpreterOptions);
-
-console.log(interpreterOptions.startContext.buffer);

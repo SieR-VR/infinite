@@ -5,6 +5,7 @@
         "esModuleInterop": true,
         "paths": {
             "core/*": ["./core/*"],
+            "rule/*": ["./rule/*"],
             "@/*": ["./*"],
         },
         "declaration": true,

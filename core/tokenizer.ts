@@ -1,42 +1,44 @@
-import { Module, TokenizeRule } from "./module";
+import { TokenizeRuleModule } from "rule/tokenizer";
 
 export interface TokenizerInput {
     input: string;
     fileName: string;
 }
 
-export interface TokenizerOptions {
-    modules?: Module<any, any, any>[];
-}
-
 export interface Token {
     tokenType: string;
     innerString: string;
+
+    startPos: number;
+    endPos: number;
 }
 
-export function tokenize(input: TokenizerInput, options: TokenizerOptions = {}): Token[] {
+export function tokenize(input: TokenizerInput, tokenizers: TokenizeRuleModule[], ignoreRegex: RegExp = /^\s+/): Token[] {
     const { input: inputString, fileName } = input;
-    const { modules = [] } = options;
-    const tokenizeRules = modules.reduce((acc, module) => acc.concat(module.tokenizeRules), [] as TokenizeRule[]);
     const tokens: Token[] = [];
     
     let index = 0;
-    const whitespaceRegex = /^\s+/;
-
     while (index < inputString.length) {
         let matched = false;
-        const whitespaceMatch = whitespaceRegex.exec(inputString.slice(index));
-        if (whitespaceMatch && whitespaceMatch.index === 0) {
-            const [innerString] = whitespaceMatch;
+
+        const ignoreMatch = ignoreRegex.exec(inputString.slice(index));
+        if (ignoreMatch && ignoreMatch.index === 0) {
+            const [innerString] = ignoreMatch;
             index += innerString.length;
         }
 
-        for (const rule of tokenizeRules) {
-            const { tokenType, regex } = rule;
-            const match = regex.exec(inputString.slice(index));
-            if (match && match.index === 0) {
-                const [innerString] = match;
-                tokens.push({ tokenType, innerString });
+        for (const rule of tokenizers) {
+            const { tokenType, tokenizer } = rule;
+            const match = tokenizer(inputString.slice(index));
+            if (match.is_ok()) {
+                const [innerString] = match.unwrap();
+                tokens.push({ 
+                    tokenType, 
+                    innerString,
+                    startPos: index,
+                    endPos: index + innerString.length,
+                });
+
                 index += innerString.length;
                 matched = true;
                 break;

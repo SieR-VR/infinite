@@ -1,37 +1,36 @@
-import { Node } from "./parser";
-import { Module } from "./module";
+import { Node } from "core/parser";
+import { InterpretRuleModule } from "rule/interpreter";
 
 export interface InterpreterInput {
     nodes: Node[];
     fileName: string;
 }
 
-export interface InterpreterOptions<InterpreterContext = undefined> {
-    modules?: Module<any, InterpreterContext, any>[];
-    startContext: InterpreterContext;
-}
-
 export type EvaluateGetter<Context, NodeType extends Node = Node> = (name: string) => Evaluate<Context, NodeType>;
-export type Evaluate<Context, NodeType extends Node = Node> = (node: NodeType, getEvaluate: EvaluateGetter<Context, Node>, context: Context) => any;
 
-export function interpret<Context = undefined>(input: InterpreterInput, options: InterpreterOptions<Context>): any {
+export type Evaluate<Context, NodeType extends Node = Node> = (node: NodeType, evaluator: (node: Node) => any, context: Context) => any;
+
+export function interpret<Context = undefined>(input: InterpreterInput, interpreters: InterpretRuleModule<Context, Node>[], makeContext: () => Context): any {
     const { nodes, fileName } = input;
-    const { modules = [], startContext } = options;
+    const startContext = makeContext();
 
     const evaluateMap = new Map<string, Evaluate<Context>>();
-    for (const module of modules) {
-        evaluateMap.set(module.name, module.evaluate);
+    for (const interpreter of interpreters) {
+        evaluateMap.set(interpreter.nodeType, interpreter.evaluate);
     }
 
     const getEvaluate: EvaluateGetter<Context> = (name) => {
         const evaluate = evaluateMap.get(name);
         if (!evaluate) {
-            throw new Error(`No evaluate function for module ${name}`);
+            throw new Error(`${fileName}: No evaluate function for module ${name}`);
         }
+
         return evaluate;
     }
 
-    return nodes.map(node => {
-        return getEvaluate(node.nodeType)(node, getEvaluate, startContext);
-    });
+    const evaluator = (node: Node) => {
+        return getEvaluate(node.nodeType)(node, evaluator, startContext);
+    }
+
+    return nodes.map(evaluator);
 }
