@@ -29,9 +29,10 @@ export function tokenize(input: TokenizerInput, tokenizers: TokenizeRuleModule[]
 
         for (const rule of tokenizers) {
             const { tokenType, tokenizer } = rule;
-            const match = tokenizer(inputString.slice(index));
+            const match = tokenizer(inputString, index);
+
             if (match.is_ok()) {
-                const [innerString] = match.unwrap();
+                const innerString = match.unwrap();
                 tokens.push({ 
                     tokenType, 
                     innerString,
@@ -46,7 +47,7 @@ export function tokenize(input: TokenizerInput, tokenizers: TokenizeRuleModule[]
         }
 
         if (!matched) {
-            throw new Error(`Unexpected token at ${fileName}:${index}`);
+            throw new Error(`Unexpected character ${input.input[index]} at ${fileName}:${index}`);
         }
     }
 

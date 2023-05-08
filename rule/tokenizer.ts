@@ -20,7 +20,7 @@ interface TokenizeRuleString {
 
 interface TokenizeRuleFunction {
     tokenType: string;
-    function: (input: string) => Result<string, string>;
+    function: (input: string, index: number) => Result<string, string>;
     priority: number;
 
     regex?: never;
@@ -32,7 +32,7 @@ export type TokenizeRule = TokenizeRuleRegex | TokenizeRuleString | TokenizeRule
 export interface TokenizeRuleModule {
     priority: number;
     tokenType: string;
-    tokenizer: (input: string) => Result<string, string>;
+    tokenizer: (input: string, index: number) => Result<string, string>;
 }
 
 export function makeTokenizeRule(rules: TokenizeRule[]): TokenizeRuleModule[] {
@@ -58,13 +58,13 @@ export function makeTokenizeRule(rules: TokenizeRule[]): TokenizeRuleModule[] {
             modules.push({
                 priority,
                 tokenType,
-                tokenizer: (input: string) => {
-                    const match = regex.exec(input);
+                tokenizer: (input: string, index: number) => {
+                    const match = regex.exec(input.slice(index));
                     if (match && match.index === 0) {
                         const [innerString] = match;
                         return Ok(innerString);
                     } else {
-                        return Err(`Unexpected token at ${input}`);
+                        return Err(`Unexpected token at ${index}`);
                     }
                 }
             });
@@ -73,11 +73,11 @@ export function makeTokenizeRule(rules: TokenizeRule[]): TokenizeRuleModule[] {
             modules.push({
                 priority,
                 tokenType,
-                tokenizer: (input: string) => {
-                    if (input.startsWith(string)) {
+                tokenizer: (input: string, index: number) => {
+                    if (input.startsWith(string, index)) {
                         return Ok(string);
                     } else {
-                        return Err(`Unexpected token at ${input}`);
+                        return Err(`Unexpected token at ${index}`);
                     }
                 }
             });
