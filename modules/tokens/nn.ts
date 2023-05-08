@@ -48,7 +48,7 @@ export default makeTokenizeRule([
     },
     {
         tokenType: "Tensor",
-        string: "tensor",
+        string: "Tensor",
         priority: 1
     },
     {

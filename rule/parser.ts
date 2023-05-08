@@ -1,6 +1,7 @@
 import { Ok, Err, Result } from "ts-features";
 import { ParseRule, Node, ParseRuleGetter } from "core/parser";
 import { Token } from "core/tokenizer";
+import { convertToObject } from "typescript";
 
 interface ParseRuleToken {
     tokenType: string;
@@ -44,12 +45,14 @@ export interface ParseRuleOptions {
     role: string;
     nodeType: string;
     priority: number;
+    isTopLevel?: boolean;
 }
 
 export interface ParseRuleModule<ParserContext> {
     role: string;
     nodeType: string;
     priority: number;
+    isTopLevel: boolean;
     parseRule: ParseRule<ParserContext, Node>;
 }
 
@@ -131,6 +134,7 @@ export function makeParseRuleModule(options: ParseRuleOptions, rules: ParseRuleE
 
     return {
         ...options,
+        isTopLevel: options.isTopLevel ?? false,
         parseRule: module,
     };
 }
@@ -144,7 +148,7 @@ function isParseRuleCondition(rule: ParseRuleElement): rule is ParseRuleConditio
 }
 
 function isParseRule(rule: ParseRuleElement): rule is ParseRuleFunction {
-    return typeof rule === "function";
+    return "parseRule" in rule;
 }
 
 function parseWith<T extends ParseRuleElement>(

@@ -13,4 +13,4 @@ export default makeParseRuleModule({ role: "statement", nodeType: "repeat", prio
     {
         tokenType: "RBracket",
     }
-])
+]);

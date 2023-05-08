@@ -31,7 +31,9 @@ export function parse<ParserContext = any>(input: ParserInput, parsers: ParseRul
     const { tokens, fileName } = input;
     const nodes: Node[] = [];
     const context = makeContext();
+
     const modulesSortedByPriority = parsers.sort((a, b) => a.priority - b.priority);
+    const modulesCanAppearInTopLevel = modulesSortedByPriority.filter(m => m.isTopLevel);
 
     const getRuleMap = (() => {
         const rawMap = new Map<string, ParseRuleModule<ParserContext>[]>();
@@ -75,7 +77,7 @@ export function parse<ParserContext = any>(input: ParserInput, parsers: ParseRul
     while (index < tokens.length) {
         let matched = false;
 
-        for (const module of modulesSortedByPriority) {
+        for (const module of modulesCanAppearInTopLevel) {
             const result = module.parseRule(tokens, index, getRule, context);
             if (result.is_ok()) {
                 const [node, nextIndex] = result.unwrap();
@@ -87,7 +89,7 @@ export function parse<ParserContext = any>(input: ParserInput, parsers: ParseRul
         }
 
         if (!matched) {
-            throw new Error(`Unexpected token ${tokens[index].innerString} at ${fileName}:${tokens[index].startPos}-${tokens[index].endPos}`);
+            throw new Error(`Unexpected token ${tokens[index].tokenType} at ${fileName}:${tokens[index].startPos}-${tokens[index].endPos}`);
         }
     }
 
