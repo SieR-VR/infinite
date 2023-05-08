@@ -3,12 +3,14 @@
         "target": "ESNext",
         "module": "commonjs",
         "esModuleInterop": true,
+        "resolveJsonModule": true,
         "paths": {
             "core/*": ["./core/*"],
             "rule/*": ["./rule/*"],
-            "@/*": ["./*"],
+            "@/*": ["./*"]
         },
+        "baseUrl": ".",
         "declaration": true,
-        "outDir": "./lib",
+        "outDir": "./lib"
     }
 }
