@@ -68,18 +68,9 @@ export function makeParseRuleModule(options: ParseRuleOptions, rules: ParseRuleE
 
         for (const rule of rules) {
             if (isParseRuleToken(rule)) {
-                const result = parseWith(tokens, nextIndex, getRule, parseWithToken, rule);
-                if (result.is_ok()) {
-                    const [childNode, childIndex] = result.unwrap();
-
-                    if (!childNode)
-                        continue;
-
-                    node.children.push(childNode as Node);
-                    node.innerText += (childNode as Node).innerText;
-                    node.endPos = (childNode as Node).endPos;
-
-                    nextIndex = childIndex;
+                if (rule.tokenType === tokens[nextIndex].tokenType) {
+                    node.innerText += tokens[nextIndex].innerString;
+                    nextIndex++;
                     continue;
                 }
 
@@ -102,6 +93,9 @@ export function makeParseRuleModule(options: ParseRuleOptions, rules: ParseRuleE
                     nextIndex = childIndex;
                     continue;
                 }
+                else if (rule.isRepeatable) {
+                    continue;
+                }
 
                 return Err(`Unexpected token ${JSON.stringify(tokens[nextIndex])} at ${tokens[nextIndex].startPos}-${tokens[nextIndex].endPos}`);
             }
@@ -120,6 +114,9 @@ export function makeParseRuleModule(options: ParseRuleOptions, rules: ParseRuleE
                     node[rule.key] = childNode as any;
                     
                     nextIndex = childIndex;
+                    continue;
+                }
+                else if (rule.isRepeatable) {
                     continue;
                 }
 
@@ -171,10 +168,16 @@ function parseWith<T extends ParseRuleElement>(
             if (childNode) {
                 child.push(childNode);
                 nextIndex = childIndex;
+
+                continue;
             }
             else {
                 break;
             }
+        }
+
+        if (rule.isRepeatable) {
+            break;
         }
 
         return Err(`Unexpected token ${JSON.stringify(tokens[nextIndex])} at ${tokens[nextIndex].startPos}-${tokens[nextIndex].endPos}`);
@@ -192,27 +195,9 @@ function parseWith<T extends ParseRuleElement>(
     return Ok([child, nextIndex]);
 }
 
-function parseWithToken(tokens: Token[], nextIndex: number, getRule: ParseRuleGetter<any>, rule: ParseRuleToken): Result<[Node, number], string> {
-    const node: Node = {
-        nodeType: 'token',
-        innerText: tokens[nextIndex].innerString,
-        children: [],
-        startPos: tokens[nextIndex].startPos,
-        endPos: tokens[nextIndex].endPos,
-    }
-    
-    if (tokens[nextIndex].tokenType !== rule.tokenType) {
-        if (rule.isOptional) {
-            return Ok([node, nextIndex]);
-        }
-        return Err(`Unexpected token ${JSON.stringify(tokens[nextIndex])} at ${tokens[nextIndex].startPos}-${tokens[nextIndex].endPos}`);
-    }
-
-    return Ok([node, nextIndex + 1]);
-}
-
 function parseWithCondition(tokens: Token[], nextIndex: number, getRule: ParseRuleGetter<any>, rule: ParseRuleCondition): Result<[Node, number], string> {
     const result = getRule(rule.role, rule.condition)(tokens, nextIndex, getRule);
+    
     if (result.is_ok()) {
         const [childNode, childIndex] = result.unwrap();
         return Ok([childNode, childIndex]);

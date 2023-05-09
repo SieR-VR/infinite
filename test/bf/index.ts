@@ -22,6 +22,8 @@ import { parse, ParserInput } from "core/parser";
         const { default: parser } = await import(`@/modules/parsers/bf/${file}`);
         return parser;
     }));
+
     const ast = parse(parserInput, parsers, () => {});
+    console.log(JSON.stringify(ast, null, 4));
 })();
 

@@ -6,7 +6,7 @@ export default makeParseRuleModule({ role: "statement", nodeType: "repeat", prio
     },
     {
         role: "statement",
-        condition: ({ role }) => role === "statement",
+        condition: () => true,
         key: "statements",
         isRepeatable: true,
     },
