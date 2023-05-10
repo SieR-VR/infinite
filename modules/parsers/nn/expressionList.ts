@@ -3,14 +3,14 @@ import { Ok, Err } from "ts-features";
 import { Node } from "core/parser";
 import { makeParseRuleModule } from "rule/parser";
 
-export default makeParseRuleModule({ role: "functionParam", nodeType: "functionParam", priority: 0 }, [
+export default makeParseRuleModule({ role: "expressionList", nodeType: "expressionList", priority: 0 }, [
     {
         tokenType: "LParen",
     },
     {
         key: "params",
         parseRule: (tokens, index, getRule, context) => {
-            const parseType = getRule("variableWithType");
+            const parseType = getRule("expression");
             const startPos = tokens[index].startPos;
 
             const nodes = [] as Node[];
@@ -18,9 +18,9 @@ export default makeParseRuleModule({ role: "functionParam", nodeType: "functionP
             let innerText = "";
 
             while (nextIndex < tokens.length) {
-                const variableWithTypeNodeUnchecked = parseType(tokens, nextIndex, getRule, context);
-                if (variableWithTypeNodeUnchecked.is_ok()) {
-                    const [node, next] = variableWithTypeNodeUnchecked.unwrap();
+                const expressionNodeUnchecked = parseType(tokens, nextIndex, getRule, context);
+                if (expressionNodeUnchecked.is_ok()) {
+                    const [node, next] = expressionNodeUnchecked.unwrap();
                     nodes.push(node);
                     innerText += node.innerText;
                     nextIndex = next;
@@ -38,8 +38,8 @@ export default makeParseRuleModule({ role: "functionParam", nodeType: "functionP
             }
 
             return Ok([{
-                nodeType: "functionParams",
-                role: "functionParams",
+                nodeType: "expressionLists",
+                role: "expressionLists",
                 children: nodes,
                 innerText,
                 startPos,

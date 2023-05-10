@@ -7,9 +7,9 @@ export default makeParseRuleModule({ role: "type", nodeType: "functionType", pri
         key: "sizeTypeParam",
     },
     {
-        role: "functionParam",
-        condition: ({ nodeType }) => nodeType === "functionParam",
-        key: "functionParam",
+        role: "functionTypeParam",
+        condition: ({ nodeType }) => nodeType === "functionTypeParam",
+        key: "functionTypeParam",
     },
     {
         tokenType: "Colon",

@@ -15,7 +15,7 @@ export interface Node {
     startPos: number;
     endPos: number;
 
-    children: Node[];
+    children: (Node | Node[])[];
 }
 
 export type ParseRule<ParserContext, NodeType extends Node> = (

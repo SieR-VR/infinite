@@ -27,6 +27,10 @@ export function tokenize(input: TokenizerInput, tokenizers: TokenizeRuleModule[]
             index += innerString.length;
         }
 
+        if (index >= inputString.length) {
+            break;
+        }
+
         for (const rule of tokenizers) {
             const { tokenType, tokenizer } = rule;
             const match = tokenizer(inputString, index);
