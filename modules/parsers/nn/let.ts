@@ -1,8 +1,9 @@
 import { makeParseRuleModule } from "rule/parser";
 
-export default makeParseRuleModule({ role: "statement", nodeType: "let", priority: 0, isTopLevel: true }, [
+export default makeParseRuleModule({ role: "statement", nodeType: "let", priority: 0 }, [
     {
         tokenType: "Let",
+        determinedBy: true,
     },
     {
         role: "variableWithType",

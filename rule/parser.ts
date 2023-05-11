@@ -1,13 +1,13 @@
 import { Ok, Err, Result } from "ts-features";
-import { ParseRule, Node, ParseRuleGetter } from "core/parser";
-import { Token } from "core/tokenizer";
-import { convertToObject } from "typescript";
+import { ParseRule, Node, ParseRuleGetter, ParseError } from "core/parser";
+import { Token } from "core/tokenizer"
 
 interface ParseRuleToken {
     tokenType: string;
 
     isRepeatable?: boolean;
     isOptional?: boolean;
+    determinedBy?: boolean;
 
     key?: never;
     role?: never;
@@ -22,6 +22,7 @@ interface ParseRuleCondition {
 
     isRepeatable?: boolean;
     isOptional?: boolean;
+    determinedBy?: boolean;
 
     tokenType?: never;
     parseRule?: never;
@@ -33,6 +34,7 @@ interface ParseRuleFunction {
 
     isRepeatable?: boolean;
     isOptional?: boolean;
+    determinedBy?: boolean;
 
     role?: never;
     tokenType?: never;
@@ -67,17 +69,30 @@ export function makeParseRuleModule(options: ParseRuleOptions, rules: ParseRuleE
 
             children: [],
         };
+        
         let nextIndex = index;
+        let determined = false;
 
         for (const rule of rules) {
             if (isParseRuleToken(rule)) {
                 if (rule.tokenType === tokens[nextIndex].tokenType) {
                     node.innerText += tokens[nextIndex].innerString;
                     nextIndex++;
+                    
+                    if (rule.determinedBy) {
+                        determined = true;
+                    } 
+
                     continue;
                 }
 
-                return Err(`Unexpected token ${JSON.stringify(tokens[nextIndex])} at ${tokens[nextIndex].startPos}-${tokens[nextIndex].endPos}`);
+                return Err([{
+                    level: determined ? "error" : "warning",
+                    expected: rule.tokenType,
+                    actual: tokens[nextIndex].tokenType,
+                    startPos: tokens[nextIndex].startPos,
+                    endPos: tokens[nextIndex].endPos,
+                }, determined ? nextIndex : index]);
             }
 
             if (isParseRuleCondition(rule) || isParseRule(rule)) {
@@ -94,8 +109,14 @@ export function makeParseRuleModule(options: ParseRuleOptions, rules: ParseRuleE
                         node[rule.key] = childNodes;
 
                         nextIndex = childIndex;
+                        if (rule.determinedBy) {
+                            determined = true;
+                        }
+
                         continue;
                     }
+
+                    return Err(result.unwrap_err());
                 }
                 else {
                     const result = parseWith(tokens, nextIndex, getRule, parseWithFunc, rule);
@@ -108,17 +129,21 @@ export function makeParseRuleModule(options: ParseRuleOptions, rules: ParseRuleE
                         node[rule.key] = childNode;
 
                         nextIndex = childIndex;
+                        if (rule.determinedBy) {
+                            determined = true;
+                        }
+
                         continue;
                     }
                     else if (rule.isOptional) {
                         continue;
                     }
-                }
 
-                return Err(`Unexpected token ${JSON.stringify(tokens[nextIndex])} at ${tokens[nextIndex].startPos}-${tokens[nextIndex].endPos}`);
+                    return Err(result.unwrap_err());
+                }
             }
 
-            return Err(`Unexpected token ${JSON.stringify(tokens[nextIndex])} at ${tokens[nextIndex].startPos}-${tokens[nextIndex].endPos}`);
+            throw new Error(`Invalid parse rule: ${rule}/${options.nodeType}`);
         }
 
         return Ok([node, nextIndex]);
@@ -152,9 +177,9 @@ function parseRepeatableWith<T extends ParseRuleElement>(
         nextIndex: number,
         getRule: ParseRuleGetter<any>,
         rule: T
-    ) => Result<[Node, number], string>,
+    ) => Result<[Node, number], [ParseError, number]>,
     rule: T
-): Result<[Node[], number], string> {
+): Result<[Node[], number], [ParseError, number]> {
     const child: Node[] = [];
 
     while (true) {
@@ -184,14 +209,14 @@ function parseWith<T extends ParseRuleElement>(
         nextIndex: number,
         getRule: ParseRuleGetter<any>,
         rule: T
-    ) => Result<[Node, number], string>,
+    ) => Result<[Node, number], [ParseError, number]>,
     rule: T
-): Result<[Node, number], string> {
+): Result<[Node, number], [ParseError, number]> {
     const result = parseWithFunc(tokens, nextIndex, getRule, rule);
     return result;
 }
 
-function parseWithCondition(tokens: Token[], nextIndex: number, getRule: ParseRuleGetter<any>, rule: ParseRuleCondition): Result<[Node, number], string> {
+function parseWithCondition(tokens: Token[], nextIndex: number, getRule: ParseRuleGetter<any>, rule: ParseRuleCondition): Result<[Node, number], [ParseError, number]> {
     const result = getRule(rule.role, rule.condition)(tokens, nextIndex, getRule);
 
     if (result.is_ok()) {
@@ -199,10 +224,10 @@ function parseWithCondition(tokens: Token[], nextIndex: number, getRule: ParseRu
         return Ok([childNode, childIndex]);
     }
 
-    return Err(`Unexpected token ${JSON.stringify(tokens[nextIndex])} at ${tokens[nextIndex].startPos}-${tokens[nextIndex].endPos}`);
+    return result;
 }
 
-function parseWithParseRule(tokens: Token[], nextIndex: number, getRule: ParseRuleGetter<any>, rule: ParseRuleFunction): Result<[Node, number], string> {
+function parseWithParseRule(tokens: Token[], nextIndex: number, getRule: ParseRuleGetter<any>, rule: ParseRuleFunction): Result<[Node, number], [ParseError, number]> {
     const result = rule.parseRule(tokens, nextIndex, getRule);
 
     if (result.is_ok()) {
@@ -210,5 +235,5 @@ function parseWithParseRule(tokens: Token[], nextIndex: number, getRule: ParseRu
         return Ok([childNode, childIndex]);
     }
 
-    return Err(`Unexpected token ${JSON.stringify(tokens[nextIndex])} at ${tokens[nextIndex].startPos}-${tokens[nextIndex].endPos}`);
+    return result;
 }

@@ -6,6 +6,7 @@ import { makeParseRuleModule } from "rule/parser";
 export default makeParseRuleModule({ role: "sizeTypeParam", nodeType: "sizeTypeParam", priority: 0 }, [
     {
         tokenType: "LBracket",
+        determinedBy: true,
     },
     {
         key: "params",

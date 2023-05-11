@@ -1,8 +1,9 @@
 import { makeParseRuleModule } from "rule/parser";
 
-export default makeParseRuleModule({ role: "type", nodeType: "tensorType", priority: 0, isTopLevel: true }, [
+export default makeParseRuleModule({ role: "type", nodeType: "tensorType", priority: 0 }, [
     {
         tokenType: "Tensor",
+        determinedBy: true,
     },
     {
         role: "sizeTypeParam",

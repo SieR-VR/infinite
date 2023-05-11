@@ -1,6 +1,6 @@
 import { makeParseRuleModule } from "rule/parser";
 
-export default makeParseRuleModule({ role: "type", nodeType: "functionType", priority: 0, isTopLevel: true }, [
+export default makeParseRuleModule({ role: "type", nodeType: "functionType", priority: 0 }, [
     {
         role: "sizeTypeParam",
         condition: ({ nodeType }) => nodeType === "sizeTypeParam",

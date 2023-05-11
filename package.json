@@ -16,9 +16,11 @@
     "extensible"
   ],
   "scripts": {
-    "test": "ts-node -r tsconfig-paths/register",
-    "test:bf": "yarn test ./test/bf",
-    "test:nn": "yarn test ./test/nn"
+    "infinite": "ts-node -r tsconfig-paths/register ./cli/index.ts",
+    "test": "jest"
+  },
+  "bin": {
+    "infinite": "./bin/infinite"
   },
   "dependencies": {
     "ts-features": "^1.3.4"

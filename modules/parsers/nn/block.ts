@@ -3,6 +3,7 @@ import { makeParseRuleModule } from "rule/parser";
 export default makeParseRuleModule({ role: "expression", nodeType: "block", priority: 0 }, [
     {
         tokenType: "LBrace",
+        determinedBy: true,
     },
     {
         role: "statement",

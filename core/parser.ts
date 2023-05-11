@@ -18,18 +18,31 @@ export interface Node {
     children: (Node | Node[])[];
 }
 
+export interface ParseError {
+    level: "critical" | "error" | "warning";
+    
+    tried?: string[];
+    expected?: string;
+    actual?: string;
+
+    startPos: number;
+    endPos: number;
+}
+
 export type ParseRule<ParserContext, NodeType extends Node> = (
     tokens: Token[],
     index: number,
     getRule: ParseRuleGetter<ParserContext>,
     context?: ParserContext
-) => Result<[NodeType, number], string>;
+) => Result<[NodeType, number], [ParseError, number]>;
 
 export type ParseRuleGetter<ParserContext> = (role: string, condition?: (p: ParseRuleModule<ParserContext>) => boolean) => ParseRule<ParserContext, Node>;
 
-export function parse<ParserContext = any>(input: ParserInput, parsers: ParseRuleModule<ParserContext>[], makeContext: () => ParserContext): Node[] {
+export function parse<ParserContext = any>(input: ParserInput, parsers: ParseRuleModule<ParserContext>[], makeContext: () => ParserContext): Result<Node[], ParseError[]> {
     const { tokens, fileName } = input;
     const nodes: Node[] = [];
+    const errors: ParseError[] = [];
+
     const context = makeContext();
 
     const modulesSortedByPriority = parsers.sort((a, b) => a.priority - b.priority);
@@ -50,14 +63,27 @@ export function parse<ParserContext = any>(input: ParserInput, parsers: ParseRul
         for (const [role, modules] of rawMap) {
             map.set(role, (condition: (module: ParseRuleModule<ParserContext>) => boolean) => (tokens, index, getRule) => {
                 const filteredModules = modules.filter(condition);
+                const failResults: [ParseError, number][] = [];
+
+                if (filteredModules.length === 0) {
+                    throw new Error(`No rule for role ${role} found`);
+                }
+
                 for (const module of filteredModules) {
                     const result = module.parseRule(tokens, index, getRule, context);
                     if (result.is_ok()) {
                         return result;
                     }
+
+                    failResults.push(result.unwrap_err());
                 }
 
-                return Err(`Unexpected token ${JSON.stringify(tokens[index])} at ${fileName}:${tokens[index].startPos}-${tokens[index].endPos}`);
+                return Err([{
+                    level: "error",
+                    tried: filteredModules.map(m => m.nodeType),
+                    startPos: tokens[index].startPos,
+                    endPos: tokens[index].endPos,
+                }, index + 1]);
             });
         }
 
@@ -86,13 +112,29 @@ export function parse<ParserContext = any>(input: ParserInput, parsers: ParseRul
                 matched = true;
                 break;
             }
+            else {
+                const [error, nextIndex] = result.unwrap_err();
+                
+                if (error.level === "critical")
+                    return Err([error]);
+
+                index = nextIndex;
+                errors.push(error);
+
+                matched = true;
+                break;
+            }
         }
 
         if (!matched) {
-            throw new Error(`Unexpected token ${tokens[index].tokenType} at ${fileName}:${tokens[index].startPos}-${tokens[index].endPos}`);
+            return Err([{
+                level: "critical",
+                startPos: tokens[index].startPos,
+                endPos: tokens[index].endPos,
+            }]);
         }
     }
 
-    return nodes;
+    return Ok(nodes);
 }
 

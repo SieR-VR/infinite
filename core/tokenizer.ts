@@ -1,3 +1,4 @@
+import { Result, Ok, Err } from "ts-features";
 import { TokenizeRuleModule } from "rule/tokenizer";
 
 export interface TokenizerInput {
@@ -13,9 +14,16 @@ export interface Token {
     endPos: number;
 }
 
-export function tokenize(input: TokenizerInput, tokenizers: TokenizeRuleModule[], ignoreRegex: RegExp = /^\s+/): Token[] {
+export interface Position {
+    startPos: number;
+    endPos: number;
+}
+
+export function tokenize(input: TokenizerInput, tokenizers: TokenizeRuleModule[], ignoreRegex: RegExp = /^\s+/): Result<Token[], Position[]> {
     const { input: inputString, fileName } = input;
+    
     const tokens: Token[] = [];
+    const errorPositions: Position[] = [];
     
     let index = 0;
     while (index < inputString.length) {
@@ -51,9 +59,17 @@ export function tokenize(input: TokenizerInput, tokenizers: TokenizeRuleModule[]
         }
 
         if (!matched) {
-            throw new Error(`Unexpected character ${input.input[index]} at ${fileName}:${index}`);
+            errorPositions.push({
+                startPos: index,
+                endPos: index + 1,
+            });
+            index += 1;
         }
     }
 
-    return tokens;
+    if (errorPositions.length) {
+        return Err(errorPositions);
+    }
+
+    return Ok(tokens);
 }
