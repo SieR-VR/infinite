@@ -1,1 +1,0 @@
-node ./lib/cli/index.js
