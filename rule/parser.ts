@@ -41,6 +41,7 @@ interface ParseRuleFunction {
     condition?: never;
 }
 
+
 type ParseRuleElement = ParseRuleToken | ParseRuleCondition | ParseRuleFunction;
 
 export interface ParseRuleOptions {
@@ -86,13 +87,13 @@ export function makeParseRuleModule(options: ParseRuleOptions, rules: ParseRuleE
                     continue;
                 }
 
-                return Err([{
+                return Err([[{
                     level: determined ? "error" : "warning",
                     expected: rule.tokenType,
                     actual: tokens[nextIndex].tokenType,
                     startPos: tokens[nextIndex].startPos,
                     endPos: tokens[nextIndex].endPos,
-                }, determined ? nextIndex : index]);
+                }], index]);
             }
 
             if (isParseRuleCondition(rule) || isParseRule(rule)) {
@@ -177,9 +178,9 @@ function parseRepeatableWith<T extends ParseRuleElement>(
         nextIndex: number,
         getRule: ParseRuleGetter<any>,
         rule: T
-    ) => Result<[Node, number], [ParseError, number]>,
+    ) => Result<[Node, number], [ParseError[], number]>,
     rule: T
-): Result<[Node[], number], [ParseError, number]> {
+): Result<[Node[], number], [ParseError[], number]> {
     const child: Node[] = [];
 
     while (true) {
@@ -209,14 +210,14 @@ function parseWith<T extends ParseRuleElement>(
         nextIndex: number,
         getRule: ParseRuleGetter<any>,
         rule: T
-    ) => Result<[Node, number], [ParseError, number]>,
+    ) => Result<[Node, number], [ParseError[], number]>,
     rule: T
-): Result<[Node, number], [ParseError, number]> {
+): Result<[Node, number], [ParseError[], number]> {
     const result = parseWithFunc(tokens, nextIndex, getRule, rule);
     return result;
 }
 
-function parseWithCondition(tokens: Token[], nextIndex: number, getRule: ParseRuleGetter<any>, rule: ParseRuleCondition): Result<[Node, number], [ParseError, number]> {
+function parseWithCondition(tokens: Token[], nextIndex: number, getRule: ParseRuleGetter<any>, rule: ParseRuleCondition): Result<[Node, number], [ParseError[], number]> {
     const result = getRule(rule.role, rule.condition)(tokens, nextIndex, getRule);
 
     if (result.is_ok()) {
@@ -227,7 +228,7 @@ function parseWithCondition(tokens: Token[], nextIndex: number, getRule: ParseRu
     return result;
 }
 
-function parseWithParseRule(tokens: Token[], nextIndex: number, getRule: ParseRuleGetter<any>, rule: ParseRuleFunction): Result<[Node, number], [ParseError, number]> {
+function parseWithParseRule(tokens: Token[], nextIndex: number, getRule: ParseRuleGetter<any>, rule: ParseRuleFunction): Result<[Node, number], [ParseError[], number]> {
     const result = rule.parseRule(tokens, nextIndex, getRule);
 
     if (result.is_ok()) {

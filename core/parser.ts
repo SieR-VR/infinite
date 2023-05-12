@@ -34,7 +34,7 @@ export type ParseRule<ParserContext, NodeType extends Node> = (
     index: number,
     getRule: ParseRuleGetter<ParserContext>,
     context?: ParserContext
-) => Result<[NodeType, number], [ParseError, number]>;
+) => Result<[NodeType, number], [ParseError[], number]>;
 
 export type ParseRuleGetter<ParserContext> = (role: string, condition?: (p: ParseRuleModule<ParserContext>) => boolean) => ParseRule<ParserContext, Node>;
 
@@ -63,7 +63,7 @@ export function parse<ParserContext = any>(input: ParserInput, parsers: ParseRul
         for (const [role, modules] of rawMap) {
             map.set(role, (condition: (module: ParseRuleModule<ParserContext>) => boolean) => (tokens, index, getRule) => {
                 const filteredModules = modules.filter(condition);
-                const failResults: [ParseError, number][] = [];
+                const failResults: ParseError[] = [];
 
                 if (filteredModules.length === 0) {
                     throw new Error(`No rule for role ${role} found`);
@@ -75,15 +75,14 @@ export function parse<ParserContext = any>(input: ParserInput, parsers: ParseRul
                         return result;
                     }
 
-                    failResults.push(result.unwrap_err());
+                    const [failResultsScope] = result.unwrap_err();
+                    failResults.push(...(failResultsScope.map(failResult => ({
+                        ...failResult,
+                        tried: failResult.tried ? failResult.tried.map((s) => `${s}/${module.nodeType}`) : [module.nodeType],
+                    }))));
                 }
 
-                return Err([{
-                    level: "error",
-                    tried: filteredModules.map(m => m.nodeType),
-                    startPos: tokens[index].startPos,
-                    endPos: tokens[index].endPos,
-                }, index + 1]);
+                return Err([failResults, index]);
             });
         }
 
@@ -102,6 +101,7 @@ export function parse<ParserContext = any>(input: ParserInput, parsers: ParseRul
     let index = 0;
     while (index < tokens.length) {
         let matched = false;
+        const scopeErrors: ParseError[] = [];
 
         for (const module of modulesCanAppearInTopLevel) {
             const result = module.parseRule(tokens, index, getRule, context);
@@ -115,24 +115,27 @@ export function parse<ParserContext = any>(input: ParserInput, parsers: ParseRul
             else {
                 const [error, nextIndex] = result.unwrap_err();
                 
-                if (error.level === "critical")
-                    return Err([error]);
+                if (error[error.length - 1].level === "critical")
+                    return Err(error);
 
                 index = nextIndex;
-                errors.push(error);
+                scopeErrors.push(...error);
 
-                matched = true;
                 break;
             }
         }
 
         if (!matched) {
-            return Err([{
-                level: "critical",
-                startPos: tokens[index].startPos,
-                endPos: tokens[index].endPos,
-            }]);
+            if (scopeErrors.length) {
+                errors.push(...scopeErrors);
+            }
+
+            return Err(errors);
         }
+    }
+
+    if (errors.length) {
+        return Err(errors);
     }
 
     return Ok(nodes);

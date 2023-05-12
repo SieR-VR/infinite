@@ -42,6 +42,8 @@ if (ast.is_err()) {
     process.exit(1);
 }
 
+console.log(JSON.stringify(ast.unwrap(), null, 4));
+
 function makeTokenizerInput(file: string): TokenizerInput {
     return {
         fileName: file,
