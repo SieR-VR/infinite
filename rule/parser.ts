@@ -82,7 +82,7 @@ export function makeParseRuleModule(options: ParseRuleOptions, rules: ParseRuleE
                     
                     if (rule.determinedBy) {
                         determined = true;
-                    } 
+                    }
 
                     continue;
                 }

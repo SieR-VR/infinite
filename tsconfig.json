@@ -7,7 +7,7 @@
         "paths": {
             "core/*": ["./core/*"],
             "rule/*": ["./rule/*"],
-            "@/*": ["./*"]
+            "infinite-lang/*": ["./*"]
         },
         "baseUrl": ".",
         "declaration": true,

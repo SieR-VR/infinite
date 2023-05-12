@@ -121,7 +121,7 @@ export function parse<ParserContext = any>(input: ParserInput, parsers: ParseRul
                 index = nextIndex;
                 scopeErrors.push(...error);
 
-                break;
+                continue;
             }
         }
 
