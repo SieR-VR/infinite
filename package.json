@@ -1,6 +1,6 @@
 {
   "name": "infinite-lang",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A language that infinitly extensible",
   "main": "lib/core/module.js",
   "typings": "lib/core/module.d.ts",
@@ -17,10 +17,11 @@
   ],
   "scripts": {
     "infinite": "ts-node -r tsconfig-paths/register ./cli/index.ts",
+    "build": "tsc",
     "test": "jest"
   },
   "bin": {
-    "infinite": "./bin/infinite"
+    "infinite": "./lib/cli"
   },
   "dependencies": {
     "ts-features": "^1.3.4"

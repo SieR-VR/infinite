@@ -15,7 +15,7 @@ infconfig.parser = infconfig.parser.flatMap((parser) => {
         return parser;
 
     const dir = parser.slice(0, -2);
-    return fs.readdirSync(path.join("./modules/parsers", dir)).map((file) => path.join(dir, file));
+    return fs.readdirSync(path.join("./", dir)).map((file) => path.join(dir, file));
 });
 
 if (args.length < 1) {
@@ -23,8 +23,8 @@ if (args.length < 1) {
     process.exit(1);
 }
 
-const tokenizeModules: TokenizeRuleModule[] = require(path.join('./modules/tokens', infconfig.token)).default;
-const parseModules: ParseRuleModule<any>[] = infconfig.parser.flatMap((parser) => require(path.join('./modules/parsers', parser)).default);
+const tokenizeModules: TokenizeRuleModule[] = require(path.join('./', infconfig.token)).default;
+const parseModules: ParseRuleModule<any>[] = infconfig.parser.flatMap((parser) => require(path.join('./', parser)).default);
 
 const tokenizerInput = makeTokenizerInput(args[0]);
 const tokens = tokenize(tokenizerInput, tokenizeModules);

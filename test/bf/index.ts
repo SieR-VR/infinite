@@ -15,7 +15,7 @@ import { parse, ParserInput } from "core/parser";
 
     const parserInput: ParserInput = {
         fileName: 'test',
-        tokens,
+        tokens: tokens.unwrap(),
     };
 
     const parsers = await Promise.all(fs.readdirSync('modules/parsers/bf').map(async (file) => {
