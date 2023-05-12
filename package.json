@@ -1,6 +1,6 @@
 {
   "name": "infinite-lang",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A language that infinitly extensible",
   "main": "lib/core/module.js",
   "typings": "lib/core/module.d.ts",
