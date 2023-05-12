@@ -1,15 +1,15 @@
-import type { Token, TokenizerInput } from "infinite-lang/core/tokenizer";
-import type { TokenizeRuleModule } from "infinite-lang/rule/tokenizer";
+import type { Token, TokenizerInput } from "../core/tokenizer";
+import type { TokenizeRuleModule } from "../rule/tokenizer";
 
-import type { ParserInput } from "infinite-lang/core/parser";
-import type { ParseRuleModule } from "infinite-lang/rule/parser";
+import type { ParserInput } from "../core/parser";
+import type { ParseRuleModule } from "../rule/parser";
 
 (async () => {
     const fs = await import("fs");
     const path = await import("path");
 
-    const tokenize = (await import("infinite-lang/core/tokenizer")).tokenize;
-    const parse = (await import("infinite-lang/core/parser")).parse;
+    const tokenize = (await import("../core/tokenizer")).tokenize;
+    const parse = (await import("../core/parser")).parse;
 
     const args = process.argv.slice(2);
     const infconfig: { token: string, parser: string[] } = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'infconfig.json'), 'utf8'));

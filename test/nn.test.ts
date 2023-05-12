@@ -1,8 +1,8 @@
 import * as fs from "fs";
 import * as path from "path";
 
-import { tokenize, TokenizerInput } from "core/tokenizer";
-import { parse, ParserInput } from "core/parser";
+import { tokenize, TokenizerInput } from "../core/tokenizer";
+import { parse, ParserInput } from "../core/parser";
 
 describe("tokenizer function", () => {
     const success_files = fs.readdirSync(path.join(__dirname, 'nn', 'tokenize'));
@@ -19,7 +19,7 @@ describe("tokenizer function", () => {
         it(`should tokenize ${file}`, async () => {
             const input = makeTokenizerInput(`tokenize/${file}`);
 
-            const { default: tokenizers } = await import("infinite-lang/modules/tokens/nn");
+            const { default: tokenizers } = await import("../modules/tokens/nn");
             const tokens = tokenize(input, tokenizers);
         });
     });
@@ -28,7 +28,7 @@ describe("tokenizer function", () => {
         it(`should fail to tokenize ${file}`, async () => {
             const input = makeTokenizerInput(`tokenize_fail/${file}`);
 
-            const { default: tokenizers } = await import("infinite-lang/modules/tokens/nn");
+            const { default: tokenizers } = await import("../modules/tokens/nn");
             const tokens = tokenize(input, tokenizers);
 
             expect(tokens.is_err()).toBe(true);
@@ -49,12 +49,12 @@ describe("parser function", () => {
     files.forEach((file) => {
         it(`should parse ${file}`, async () => {
             const parsers = await Promise.all(fs.readdirSync('modules/parsers/nn').map(async (file) => {
-                const { default: parser } = await import(`infinite-lang/modules/parsers/nn/${file}`);
+                const { default: parser } = await import(`../modules/parsers/nn/${file}`);
                 return parser;
             }));
 
             const input = makeTokenizerInput(file);
-            const { default: tokenizers } = await import("infinite-lang/modules/tokens/nn");
+            const { default: tokenizers } = await import("../modules/tokens/nn");
             const tokens = tokenize(input, tokenizers);
 
             const parserInput: ParserInput = {

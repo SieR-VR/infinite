@@ -1,5 +1,5 @@
 import { Result, Ok, Err } from "ts-features";
-import { TokenizeRuleModule } from "rule/tokenizer";
+import { TokenizeRuleModule } from "../rule/tokenizer";
 
 export interface TokenizerInput {
     input: string;

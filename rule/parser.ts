@@ -1,6 +1,6 @@
 import { Ok, Err, Result } from "ts-features";
-import { ParseRule, Node, ParseRuleGetter, ParseError } from "core/parser";
-import { Token } from "core/tokenizer"
+import { ParseRule, Node, ParseRuleGetter, ParseError } from "../core/parser";
+import { Token } from "../core/tokenizer"
 
 interface ParseRuleToken {
     tokenType: string;

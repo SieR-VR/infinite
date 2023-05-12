@@ -1,7 +1,7 @@
 import { Result, Ok, Err } from "ts-features";
 
-import { Token } from "core/tokenizer";
-import { ParseRuleModule } from "rule/parser";
+import { Token } from "../core/tokenizer";
+import { ParseRuleModule } from "../rule/parser";
 
 export interface ParserInput {
     tokens: Token[];

@@ -1,9 +1,9 @@
 {
   "name": "infinite-lang",
-  "version": "0.0.7",
+  "version": "0.0.11",
   "description": "A language that infinitly extensible",
-  "main": "lib/core/module.js",
-  "typings": "lib/core/module.d.ts",
+  "main": "lib/index.js",
+  "typings": "lib/index.d.ts",
   "author": "SieR-VR",
   "license": "MIT",
   "exports": {
