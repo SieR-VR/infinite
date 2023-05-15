@@ -24,4 +24,4 @@ export default makeParseRuleModule({ role: "expression", nodeType: "function", p
         condition: ({ nodeType }) => nodeType === "block",
         key: "statements"
     }
-]);
+] as const);

@@ -98,8 +98,8 @@ export type NodeFromElements<Elements extends readonly ParseRuleElement[]> =
 
 export function makeParseRuleModule<Elements extends readonly ParseRuleElement[], ParserContext = any>(options: ParseRuleOptions, rules: Elements)
     : NodeFromElements<Elements> extends Node ? 
-            ParseRuleModule<ParserContext, NodeFromElements<Elements>> :
-            never
+        ParseRuleModule<ParserContext, NodeFromElements<Elements>> :
+        never
 {
     const module: ParseRule<ParserContext, Node> = (tokens, index, getRule) => {
         const node: Node = {
