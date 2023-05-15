@@ -18,7 +18,7 @@ interface ParseRuleToken {
 interface ParseRuleCondition {
     key: string;
     role: string;
-    condition: (p: ParseRuleOptions) => boolean;
+    condition: (p: ParseRuleOptions<string>) => boolean;
 
     isRepeatable?: boolean;
     isOptional?: boolean;
@@ -44,16 +44,16 @@ interface ParseRuleFunction {
 
 type ParseRuleElement = ParseRuleToken | ParseRuleCondition | ParseRuleFunction;
 
-export interface ParseRuleOptions {
+export interface ParseRuleOptions<NodeTypeString extends string> {
     role: string;
-    nodeType: string;
+    nodeType: NodeTypeString;
     priority: number;
     isTopLevel?: boolean;
 }
 
-export interface ParseRuleModule<ParserContext, NodeType extends Node> {
+export interface ParseRuleModule<ParserContext, NodeType extends Node, NodeTypeString extends string> {
     role: string;
-    nodeType: string;
+    nodeType: NodeTypeString;
     priority: number;
     isTopLevel: boolean;
     parseRule: ParseRule<ParserContext, NodeType>;
@@ -96,9 +96,9 @@ export type NodeFromElements<Elements extends readonly ParseRuleElement[]> =
                 never;
     }
 
-export function makeParseRuleModule<Elements extends readonly ParseRuleElement[], ParserContext = any>(options: ParseRuleOptions, rules: Elements)
+export function makeParseRuleModule<Elements extends readonly ParseRuleElement[], ParserContext = any, NodeTypeString extends string = string>(options: ParseRuleOptions<NodeTypeString>, rules: Elements)
     : NodeFromElements<Elements> extends Node ? 
-        ParseRuleModule<ParserContext, NodeFromElements<Elements>> :
+        ParseRuleModule<ParserContext, NodeFromElements<Elements>, NodeTypeString> :
         never
 {
     const module: ParseRule<ParserContext, Node> = (tokens, index, getRule) => {
