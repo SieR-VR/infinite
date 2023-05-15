@@ -2,6 +2,7 @@ import { Result, Ok, Err } from "ts-features";
 
 import { Token } from "../core/tokenizer";
 import { ParseRuleModule } from "../rule/parser";
+import { HighlightTokenTypes } from "../rule/tokenizer";
 
 export interface ParserInput {
     tokens: Token[];
@@ -11,10 +12,11 @@ export interface ParserInput {
 export interface Node {
     nodeType: string;
     innerText: string;
-
+    
     startPos: number;
     endPos: number;
-
+    
+    semanticHighlight?: HighlightTokenTypes;
     children: (Node | Node[])[];
 }
 
@@ -33,6 +35,7 @@ export type ParseRule<ParserContext, NodeType extends Node> = (
     tokens: Token[],
     index: number,
     getRule: ParseRuleGetter<ParserContext>,
+    semanticHighlight?: HighlightTokenTypes,
     context?: ParserContext
 ) => Result<[NodeType, number], [ParseError[], number]>;
 
@@ -61,7 +64,7 @@ export function parse<ParserContext = any>(input: ParserInput, parsers: ParseRul
         const map = new Map<string, (condition: (module: ParseRuleModule<ParserContext, Node, string>) => boolean) => ParseRule<ParserContext, Node>>();
 
         for (const [role, modules] of rawMap) {
-            map.set(role, (condition: (module: ParseRuleModule<ParserContext, Node, string>) => boolean) => (tokens, index, getRule) => {
+            map.set(role, (condition: (module: ParseRuleModule<ParserContext, Node, string>) => boolean): ParseRule<ParserContext, Node> => (tokens, index, getRule, semanticHighlight) => {
                 const filteredModules = modules.filter(condition);
                 const failResults: ParseError[] = [];
 
@@ -70,7 +73,7 @@ export function parse<ParserContext = any>(input: ParserInput, parsers: ParseRul
                 }
 
                 for (const module of filteredModules) {
-                    const result = module.parseRule(tokens, index, getRule, context);
+                    const result = module.parseRule(tokens, index, getRule, semanticHighlight, context);
                     if (result.is_ok()) {
                         return result;
                     }
@@ -78,7 +81,7 @@ export function parse<ParserContext = any>(input: ParserInput, parsers: ParseRul
                     const [failResultsScope] = result.unwrap_err();
                     failResults.push(...(failResultsScope.map(failResult => ({
                         ...failResult,
-                        tried: failResult.tried ? failResult.tried.map((s) => `${s}/${module.nodeType}`) : [module.nodeType],
+                        tried: failResult.tried ? failResult.tried.map((s) => `${module.nodeType}/${s}`) : [module.nodeType],
                     }))));
                 }
 
@@ -104,7 +107,7 @@ export function parse<ParserContext = any>(input: ParserInput, parsers: ParseRul
         const scopeErrors: ParseError[] = [];
 
         for (const module of modulesCanAppearInTopLevel) {
-            const result = module.parseRule(tokens, index, getRule, context);
+            const result = module.parseRule(tokens, index, getRule, undefined, context);
             if (result.is_ok()) {
                 const [node, nextIndex] = result.unwrap();
                 nodes.push(node);

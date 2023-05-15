@@ -1,5 +1,5 @@
 import { Result, Ok, Err } from "ts-features";
-import { TokenizeRuleModule } from "../rule/tokenizer";
+import { TokenizeRuleModule, HighlightTokenTypes } from "../rule/tokenizer";
 
 export interface TokenizerInput {
     input: string;
@@ -9,6 +9,8 @@ export interface TokenizerInput {
 export interface Token {
     tokenType: string;
     innerString: string;
+
+    highlight?: HighlightTokenTypes;
 
     startPos: number;
     endPos: number;
@@ -40,19 +42,14 @@ export function tokenize(input: TokenizerInput, tokenizers: TokenizeRuleModule[]
         }
 
         for (const rule of tokenizers) {
-            const { tokenType, tokenizer } = rule;
+            const { tokenizer } = rule;
             const match = tokenizer(inputString, index);
 
             if (match.is_ok()) {
-                const innerString = match.unwrap();
-                tokens.push({ 
-                    tokenType, 
-                    innerString,
-                    startPos: index,
-                    endPos: index + innerString.length,
-                });
+                const token = match.unwrap();
+                tokens.push(token);
 
-                index += innerString.length;
+                index += token.innerString.length;
                 matched = true;
                 break;
             }
