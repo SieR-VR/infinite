@@ -36,9 +36,9 @@ export type ParseRule<ParserContext, NodeType extends Node> = (
     context?: ParserContext
 ) => Result<[NodeType, number], [ParseError[], number]>;
 
-export type ParseRuleGetter<ParserContext> = (role: string, condition?: (p: ParseRuleModule<ParserContext, Node>) => boolean) => ParseRule<ParserContext, Node>;
+export type ParseRuleGetter<ParserContext> = (role: string, condition?: (p: ParseRuleModule<ParserContext, Node, string>) => boolean) => ParseRule<ParserContext, Node>;
 
-export function parse<ParserContext = any>(input: ParserInput, parsers: ParseRuleModule<ParserContext, Node>[], makeContext: () => ParserContext): Result<Node[], ParseError[]> {
+export function parse<ParserContext = any>(input: ParserInput, parsers: ParseRuleModule<ParserContext, Node, string>[], makeContext: () => ParserContext): Result<Node[], ParseError[]> {
     const { tokens, fileName } = input;
     const nodes: Node[] = [];
     const errors: ParseError[] = [];
@@ -49,7 +49,7 @@ export function parse<ParserContext = any>(input: ParserInput, parsers: ParseRul
     const modulesCanAppearInTopLevel = modulesSortedByPriority.filter(m => m.isTopLevel);
 
     const getRuleMap = (() => {
-        const rawMap = new Map<string, ParseRuleModule<ParserContext, Node>[]>();
+        const rawMap = new Map<string, ParseRuleModule<ParserContext, Node, string>[]>();
 
         for (const module of modulesSortedByPriority) {
             const { role } = module;
@@ -58,10 +58,10 @@ export function parse<ParserContext = any>(input: ParserInput, parsers: ParseRul
             rawMap.set(role, rules);
         }
 
-        const map = new Map<string, (condition: (module: ParseRuleModule<ParserContext, Node>) => boolean) => ParseRule<ParserContext, Node>>();
+        const map = new Map<string, (condition: (module: ParseRuleModule<ParserContext, Node, string>) => boolean) => ParseRule<ParserContext, Node>>();
 
         for (const [role, modules] of rawMap) {
-            map.set(role, (condition: (module: ParseRuleModule<ParserContext, Node>) => boolean) => (tokens, index, getRule) => {
+            map.set(role, (condition: (module: ParseRuleModule<ParserContext, Node, string>) => boolean) => (tokens, index, getRule) => {
                 const filteredModules = modules.filter(condition);
                 const failResults: ParseError[] = [];
 
@@ -90,7 +90,7 @@ export function parse<ParserContext = any>(input: ParserInput, parsers: ParseRul
     })();
 
 
-    const getRule = (role: string, condition?: (module: ParseRuleModule<ParserContext, Node>) => boolean): ParseRule<ParserContext, Node> => {
+    const getRule = (role: string, condition?: (module: ParseRuleModule<ParserContext, Node, string>) => boolean): ParseRule<ParserContext, Node> => {
         const rule = getRuleMap.get(role);
         if (!rule) {
             throw new Error(`Rule for role ${role} not found`);

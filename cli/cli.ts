@@ -31,7 +31,7 @@ import type { ParseRuleModule } from "../rule/parser";
     }
     
     const tokenizeModules: TokenizeRuleModule[] = (await import(path.join(process.cwd(), infconfig.token))).default;
-    const parseModules: ParseRuleModule<any, Node>[] = await Promise.all(
+    const parseModules: ParseRuleModule<any, Node, string>[] = await Promise.all(
         infconfig.parser.flatMap(async (parser) => (await import(path.join(process.cwd(), parser))).default)
     );
     
