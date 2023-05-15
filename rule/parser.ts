@@ -51,15 +51,56 @@ export interface ParseRuleOptions {
     isTopLevel?: boolean;
 }
 
-export interface ParseRuleModule<ParserContext> {
+export interface ParseRuleModule<ParserContext, NodeType extends Node> {
     role: string;
     nodeType: string;
     priority: number;
     isTopLevel: boolean;
-    parseRule: ParseRule<ParserContext, Node>;
+    parseRule: ParseRule<ParserContext, NodeType>;
 }
 
-export function makeParseRuleModule(options: ParseRuleOptions, rules: ParseRuleElement[]): ParseRuleModule<any> {
+type AssembleElements<CurrentKey extends string, TargetNode, RestElements extends ParseRuleElement[]> =
+    {
+        [key in (CurrentKey | keyof BaseNodeFromElements<RestElements>)]: 
+            key extends CurrentKey ?
+                TargetNode :
+            key extends keyof BaseNodeFromElements<RestElements> ?
+                BaseNodeFromElements<RestElements>[key] :
+                never;
+    }
+
+type BaseNodeFromElements<Elements extends readonly ParseRuleElement[]> = 
+    Elements extends readonly [infer First, ...infer Rest] ?
+        Rest extends ParseRuleElement[] ?
+            First extends ParseRuleToken ?
+                BaseNodeFromElements<Rest> :
+            First extends ParseRuleCondition ?
+                First["isRepeatable"] extends true ?
+                    AssembleElements<First["key"], Node[], Rest> :
+                    AssembleElements<First["key"], Node, Rest> :
+            First extends ParseRuleFunction ?
+                First["isRepeatable"] extends true ?
+                    AssembleElements<First["key"], Node[], Rest> :
+                    AssembleElements<First["key"], Node, Rest> :
+            never :
+        never :
+    {};
+
+export type NodeFromElements<Elements extends readonly ParseRuleElement[]> =
+    {
+        [key in (keyof Node | keyof BaseNodeFromElements<Elements>)]:
+            key extends keyof BaseNodeFromElements<Elements> ?
+                BaseNodeFromElements<Elements>[key] :
+            key extends keyof Node ?
+                Node[key] :
+                never;
+    }
+
+export function makeParseRuleModule<Elements extends readonly ParseRuleElement[], ParserContext = any>(options: ParseRuleOptions, rules: Elements)
+    : NodeFromElements<Elements> extends Node ? 
+            ParseRuleModule<ParserContext, NodeFromElements<Elements>> :
+            never
+{
     const module: ParseRule<any, Node> = (tokens, index, getRule) => {
         const node: Node = {
             nodeType: options.nodeType,
@@ -154,7 +195,7 @@ export function makeParseRuleModule(options: ParseRuleOptions, rules: ParseRuleE
         ...options,
         isTopLevel: options.isTopLevel ?? false,
         parseRule: module,
-    };
+    } as any;
 }
 
 function isParseRuleToken(rule: ParseRuleElement): rule is ParseRuleToken {
