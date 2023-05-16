@@ -59,28 +59,6 @@ export interface ParseRuleModule<ParserContext, NodeType extends Node> {
     parseRule: ParseRule<ParserContext, NodeType>;
 }
 
-type ExtensibleNode<Keys extends string> = {
-    [K in (Keys | keyof Node)]:
-        K extends Keys ?
-            Node[] | Node :
-        K extends keyof Node ?
-            Node[K] :
-            never;
-}
-
-type KeysFromElements<Elements extends readonly ParseRuleElement[]> =
-    Elements extends readonly [infer First, ...infer Rest] ?
-        Rest extends ParseRuleElement[] ?
-            First extends ParseRuleToken ?
-                KeysFromElements<Rest> :
-            First extends ParseRuleCondition ?
-                First["key"] | KeysFromElements<Rest> :
-            First extends ParseRuleFunction ?
-                First["key"] | KeysFromElements<Rest> :
-            never :
-        never :
-    never;
-
 type AssembleElements<CurrentKey extends string, TargetNode, RestElements extends ParseRuleElement[]> =
     {
         [key in (CurrentKey | keyof BaseNodeFromElements<RestElements>)]: 
