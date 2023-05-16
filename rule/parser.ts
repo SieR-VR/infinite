@@ -59,6 +59,28 @@ export interface ParseRuleModule<ParserContext, NodeType extends Node> {
     parseRule: ParseRule<ParserContext, NodeType>;
 }
 
+type ExtensibleNode<Keys extends string> = {
+    [K in (Keys | keyof Node)]:
+        K extends Keys ?
+            Node[] | Node :
+        K extends keyof Node ?
+            Node[K] :
+            never;
+}
+
+type KeysFromElements<Elements extends readonly ParseRuleElement[]> =
+    Elements extends readonly [infer First, ...infer Rest] ?
+        Rest extends ParseRuleElement[] ?
+            First extends ParseRuleToken ?
+                KeysFromElements<Rest> :
+            First extends ParseRuleCondition ?
+                First["key"] | KeysFromElements<Rest> :
+            First extends ParseRuleFunction ?
+                First["key"] | KeysFromElements<Rest> :
+            never :
+        never :
+    never;
+
 type AssembleElements<CurrentKey extends string, TargetNode, RestElements extends ParseRuleElement[]> =
     {
         [key in (CurrentKey | keyof BaseNodeFromElements<RestElements>)]: 
@@ -101,7 +123,7 @@ export function makeParseRuleModule<Elements extends readonly ParseRuleElement[]
             ParseRuleModule<ParserContext, NodeFromElements<Elements>> :
             never
 {
-    const module: ParseRule<any, Node> = (tokens, index, getRule) => {
+    const module: ParseRule<ParserContext, Node> = (tokens, index, getRule) => {
         const node: Node = {
             nodeType: options.nodeType,
             innerText: "",
@@ -138,17 +160,19 @@ export function makeParseRuleModule<Elements extends readonly ParseRuleElement[]
             }
 
             if (isParseRuleCondition(rule) || isParseRule(rule)) {
-                const parseWithFunc = isParseRuleCondition(rule) ? parseWithCondition : parseWithParseRule;
+                const parseWithFunc = isParseRuleCondition(rule) 
+                    ? parseWithCondition 
+                    : parseWithParseRule;
 
                 if (rule.isRepeatable) {
-                    const result = parseRepeatableWith(tokens, nextIndex, getRule, parseWithFunc, rule);
+                    const result = parseRepeatableWith(tokens, nextIndex, getRule, parseWithFunc as any, rule);
                     if (result.is_ok()) {
                         const [childNodes, childIndex] = result.unwrap();
 
                         node.children.push(childNodes);
                         node.innerText += childNodes.map(node => node.innerText).join("");
                         node.endPos = tokens[childIndex].endPos;
-                        node[rule.key] = childNodes;
+                        (node as any)[rule.key] = childNodes;
 
                         nextIndex = childIndex;
                         if (rule.determinedBy) {
@@ -161,14 +185,14 @@ export function makeParseRuleModule<Elements extends readonly ParseRuleElement[]
                     return Err(result.unwrap_err());
                 }
                 else {
-                    const result = parseWith(tokens, nextIndex, getRule, parseWithFunc, rule);
+                    const result = parseWith(tokens, nextIndex, getRule, parseWithFunc as any, rule);
                     if (result.is_ok()) {
                         const [childNode, childIndex] = result.unwrap();
 
                         node.children.push(childNode);
                         node.innerText += childNode.innerText;
                         node.endPos = childNode.endPos;
-                        node[rule.key] = childNode;
+                        (node as any)[rule.key] = childNode;
 
                         nextIndex = childIndex;
                         if (rule.determinedBy) {
