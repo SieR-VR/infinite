@@ -125,14 +125,12 @@ export function makeParseRuleModule<Elements extends readonly ParseRuleElement[]
         never
 {
     const module: ParseRule<ParserContext, Node> = (input, index, getRule, semanticHighlight) => {
-        const { tokens } = input;
-
         const node: Node = {
             nodeType: options.nodeType,
             innerText: "",
             
-            startPos: tokens[index].startPos,
-            endPos: tokens[index].endPos,
+            startPos: input.tokens[index].startPos,
+            endPos: input.tokens[index].endPos,
             
             semanticHighlight,
             children: [],
@@ -144,8 +142,8 @@ export function makeParseRuleModule<Elements extends readonly ParseRuleElement[]
 
         for (const rule of rules) {
             if (isParseRuleToken(rule)) {
-                if (rule.tokenType === tokens[nextIndex].tokenType) {
-                    node.innerText += tokens[nextIndex].innerString;
+                if (rule.tokenType === input.tokens[nextIndex].tokenType) {
+                    node.innerText += input.tokens[nextIndex].innerString;
                     nextIndex++;
                     
                     if (rule.determinedBy) {
@@ -158,9 +156,9 @@ export function makeParseRuleModule<Elements extends readonly ParseRuleElement[]
                 return Err([[{
                     level: determined ? "error" : "warning",
                     expected: rule.tokenType,
-                    actual: tokens[nextIndex].tokenType,
-                    startPos: tokens[nextIndex].startPos,
-                    endPos: tokens[nextIndex].endPos,
+                    actual: input.tokens[nextIndex].tokenType,
+                    startPos: input.tokens[nextIndex].startPos,
+                    endPos: input.tokens[nextIndex].endPos,
                 }], index]);
             }
 
@@ -170,13 +168,13 @@ export function makeParseRuleModule<Elements extends readonly ParseRuleElement[]
                     : parseWithParseRule;
 
                 if (rule.isRepeatable) {
-                    const result = parseRepeatableWith(tokens, nextIndex, getRule, parseWithFunc as any, rule);
+                    const result = parseRepeatableWith(input, nextIndex, getRule, parseWithFunc as any, rule);
                     if (result.is_ok()) {
                         const [childNodes, childIndex] = result.unwrap();
 
                         node.children.push(childNodes);
                         node.innerText += childNodes.map(node => node.innerText).join("");
-                        node.endPos = tokens[childIndex].endPos;
+                        node.endPos = input.tokens[childIndex].endPos;
                         (node as any)[rule.key] = childNodes;
 
                         nextIndex = childIndex;
@@ -191,7 +189,7 @@ export function makeParseRuleModule<Elements extends readonly ParseRuleElement[]
                     continue;
                 }
                 else {
-                    const result = parseWith(tokens, nextIndex, getRule, parseWithFunc as any, rule);
+                    const result = parseWith(input, nextIndex, getRule, parseWithFunc as any, rule);
                     if (result.is_ok()) {
                         const [childNode, childIndex] = result.unwrap();
 
@@ -278,11 +276,11 @@ function isParseRuleComposite(rule: ParseRuleElement): rule is ParseRuleComposit
 }
 
 function parseRepeatableWith<T extends ParseRuleElement>(
-    tokens: Token[],
+    input: ParserInput,
     nextIndex: number,
     getRule: ParseRuleGetter<any>,
     parseWithFunc: (
-        tokens: Token[],
+        input: ParserInput,
         nextIndex: number,
         getRule: ParseRuleGetter<any>,
         rule: T
@@ -293,7 +291,7 @@ function parseRepeatableWith<T extends ParseRuleElement>(
     const errors: ParseError[] = [];
 
     while (true) {
-        const result = parseWithFunc(tokens, nextIndex, getRule, rule);
+        const result = parseWithFunc(input, nextIndex, getRule, rule);
         if (result.is_ok()) {
             const [childNode, childIndex] = result.unwrap();
             if (childNode) {
@@ -317,18 +315,18 @@ function parseRepeatableWith<T extends ParseRuleElement>(
 }
 
 function parseWith<T extends ParseRuleElement>(
-    tokens: Token[],
+    input: ParserInput,
     nextIndex: number,
     getRule: ParseRuleGetter<any>,
     parseWithFunc: (
-        tokens: Token[],
+        input: ParserInput,
         nextIndex: number,
         getRule: ParseRuleGetter<any>,
         rule: T
     ) => Result<[Node, number], [ParseError[], number]>,
     rule: T
 ): Result<[Node, number], [ParseError[], number]> {
-    const result = parseWithFunc(tokens, nextIndex, getRule, rule);
+    const result = parseWithFunc(input, nextIndex, getRule, rule);
     return result;
 }
 
