@@ -40,7 +40,7 @@ jobs:
           registry-url: https://registry.npmjs.org/
           
       - name: Automated Version Bump
-        run: npm version prerelease --preid=$GITHUB_SHA
+        run: npm version prerelease --preid=pre
           
       - run: npm publish
         env:
