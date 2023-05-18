@@ -222,29 +222,67 @@ export function makeParseRuleModule<Elements extends readonly ParseRuleElement[]
                     isTopLevel: false,
                 }, rule.composition);
 
-                const result = compositeModule.parseRule(input, nextIndex, getRule, semanticHighlight);
+                if (rule.isRepeatable) {
+                    const result = parseRepeatableWith(
+                        input, 
+                        nextIndex, 
+                        getRule, 
+                        (input, nextIndex, getRule, rule) => compositeModule
+                        .parseRule(
+                            input, 
+                            nextIndex, 
+                            getRule, 
+                            rule.semanticHighlight
+                        ), 
+                        rule
+                    );
 
-                if (result.is_ok()) {
-                    const [childNode, childIndex] = result.unwrap();
-
-                    node.children.push(childNode);
-                    node.innerText += childNode.innerText;
-                    node.endPos = childNode.endPos;
-                    (node as any)[rule.key] = childNode;
-
-                    nextIndex = childIndex;
-                    if (rule.determinedBy) {
-                        determined = true;
+                    if (result.is_ok()) {
+                        if (result.is_ok()) {
+                            const [childNodes, childIndex] = result.unwrap();
+    
+                            node.children.push(childNodes);
+                            node.innerText += childNodes.map(node => node.innerText).join("");
+                            node.endPos = input.tokens[childIndex].endPos;
+                            (node as any)[rule.key] = childNodes;
+    
+                            nextIndex = childIndex;
+                            if (rule.determinedBy) {
+                                determined = true;
+                            }
+    
+                            continue;
+                        }
                     }
 
+                    errors.push(...result.unwrap_err()[0]);
                     continue;
                 }
-                else if (rule.isOptional) {
-                    continue;
-                }
+                else {
+                    const result = compositeModule.parseRule(input, nextIndex, getRule, semanticHighlight);
 
-                const [error, index] = result.unwrap_err();
-                return Err([[...errors, ...error], index]);
+                    if (result.is_ok()) {
+                        const [childNode, childIndex] = result.unwrap();
+    
+                        node.children.push(childNode);
+                        node.innerText += childNode.innerText;
+                        node.endPos = childNode.endPos;
+                        (node as any)[rule.key] = childNode;
+    
+                        nextIndex = childIndex;
+                        if (rule.determinedBy) {
+                            determined = true;
+                        }
+    
+                        continue;
+                    }
+                    else if (rule.isOptional) {
+                        continue;
+                    }
+    
+                    const [error, index] = result.unwrap_err();
+                    return Err([[...errors, ...error], index]);
+                }
             }
 
             throw new Error(`Invalid parse rule: ${rule}/${options.nodeType}`);
