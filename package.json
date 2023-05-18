@@ -18,7 +18,7 @@
   ],
   "scripts": {
     "infinite": "ts-node -r tsconfig-paths/register ./cli/index.ts",
-    "build": "tsc",
+    "build": "yarn tsc",
     "test": "jest",
     "postinstall": "test -d ./lib || yarn build"
   },
