@@ -37,7 +37,7 @@ jobs:
           cmd: build # will run `yarn build` command
           
       - name: Automated Version Bump
-        run: npm version prerelease --preid=pre --no-git-tag-version
+        run: npm version prerelease --preid=pre
           
       - run: npm publish
         env:
