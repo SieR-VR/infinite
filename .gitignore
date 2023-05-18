@@ -1,6 +1,7 @@
 node_modules
 .yarn
 
+compose-dev.yaml
 compose-dev.yml
 
 lib
