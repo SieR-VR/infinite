@@ -22,7 +22,7 @@ jobs:
         with:
           cmd: install # will run `yarn install` command
 
-      - name: Run install
+      - name: Run build
         uses: borales/actions-yarn@v4
         with:
           cmd: build # will run `yarn build` command
@@ -30,6 +30,7 @@ jobs:
   publish-npm:
     needs: build
     runs-on: ubuntu-latest
+    environment: npm_token
     permissions:
       contents: write
     steps:
