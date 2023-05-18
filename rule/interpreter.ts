@@ -1,5 +1,5 @@
-import { Node } from "../core/parser";
-import { Evaluate } from "../core/interpreter";
+import type { Node } from "../core/parser";
+import type { Evaluate } from "../core/interpreter";
 
 export interface InterpretRuleModule<Context, NodeType extends Node> {
     nodeType: string;

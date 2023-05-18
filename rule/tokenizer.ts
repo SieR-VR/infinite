@@ -1,38 +1,37 @@
 import { Result, Ok, Err } from "ts-features";
-import { Token } from "../core/tokenizer";
+import type { Token, TokenizerInput } from "../core/tokenizer";
 
-export type HighlightTokenTypes = [
-    'namespace',
-    'class',
-    'enum',
-    'interface',
-    'struct',
-    'typeParameter',
-    'type',
-    'parameter',
-    'variable',
-    'property',
-    'enumMember',
-    'decorator',
-    'event',
-    'function',
-    'method',
-    'macro',
-    'label',
-    'comment',
-    'string',
-    'keyword',
-    'number',
-    'regexp',
-    'operator'
-][number];
+export type HighlightTokenType =
+    | 'namespace'
+    | 'class'
+    | 'enum'
+    | 'interface'
+    | 'struct'
+    | 'typeParameter'
+    | 'type'
+    | 'parameter'
+    | 'variable'
+    | 'property'
+    | 'enumMember'
+    | 'decorator'
+    | 'event'
+    | 'function'
+    | 'method'
+    | 'macro'
+    | 'label'
+    | 'comment'
+    | 'string'
+    | 'keyword'
+    | 'number'
+    | 'regexp'
+    | 'operator';
 
 interface TokenizeRuleRegex {
     tokenType: string;
     regex: RegExp;
     priority: number;
 
-    highlight?: HighlightTokenTypes;
+    highlight?: HighlightTokenType;
 
     string?: never;
     function?: never;
@@ -43,7 +42,7 @@ interface TokenizeRuleString {
     string: string;
     priority: number;
 
-    highlight?: HighlightTokenTypes;
+    highlight?: HighlightTokenType;
 
     regex?: never;
     function?: never;
@@ -51,10 +50,10 @@ interface TokenizeRuleString {
 
 interface TokenizeRuleFunction {
     tokenType: string;
-    function: (input: string, index: number) => Result<Token, string>;
+    function: Tokenizer;
     priority: number;
 
-    highlight?: HighlightTokenTypes;
+    highlight?: HighlightTokenType;
 
     regex?: never;
     string?: never;
@@ -62,12 +61,14 @@ interface TokenizeRuleFunction {
 
 export type TokenizeRule = TokenizeRuleRegex | TokenizeRuleString | TokenizeRuleFunction;
 
+export type Tokenizer = (input: TokenizerInput, index: number) => Result<Token, string>;
+
 export interface TokenizeRuleModule {
     priority: number;
     tokenType: string;
-    highlight?: HighlightTokenTypes;
 
-    tokenizer: (input: string, index: number) => Result<Token, string>;
+    highlight?: HighlightTokenType;
+    tokenizer: Tokenizer;
 }
 
 export function makeTokenizeRule(rules: TokenizeRule[]): TokenizeRuleModule[] {
@@ -93,8 +94,10 @@ export function makeTokenizeRule(rules: TokenizeRule[]): TokenizeRuleModule[] {
             modules.push({
                 priority,
                 tokenType,
-                tokenizer: (input: string, index: number) => {
-                    const match = regex.exec(input.slice(index));
+                tokenizer: (input: TokenizerInput, index: number) => {
+                    const { input: inputString } = input;
+                    const match = regex.exec(inputString.slice(index));
+
                     if (match && match.index === 0) {
                         const [innerString] = match;
                         return Ok({
@@ -105,7 +108,7 @@ export function makeTokenizeRule(rules: TokenizeRule[]): TokenizeRuleModule[] {
                             endPos: index + innerString.length,
                         });
                     } else {
-                        return Err(`Unexpected token at ${index}`);
+                        return Err(`Unexpected character at ${index}:${input.fileName}`);
                     }
                 }
             });
@@ -114,8 +117,9 @@ export function makeTokenizeRule(rules: TokenizeRule[]): TokenizeRuleModule[] {
             modules.push({
                 priority,
                 tokenType,
-                tokenizer: (input: string, index: number) => {
-                    if (input.startsWith(string, index)) {
+                tokenizer: (input: TokenizerInput, index: number) => {
+                    const { input: inputString } = input;
+                    if (inputString.startsWith(string, index)) {
                         return Ok({
                             tokenType,
                             innerString: string,
@@ -124,7 +128,7 @@ export function makeTokenizeRule(rules: TokenizeRule[]): TokenizeRuleModule[] {
                             endPos: index + string.length,
                         });
                     } else {
-                        return Err(`Unexpected token at ${index}`);
+                        return Err(`Unexpected character at ${index}:${input.fileName}`);
                     }
                 }
             });

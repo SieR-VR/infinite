@@ -1,5 +1,5 @@
 import { Result, Ok, Err } from "ts-features";
-import { TokenizeRuleModule, HighlightTokenTypes } from "../rule/tokenizer";
+import type { TokenizeRuleModule, HighlightTokenType } from "../rule/tokenizer";
 
 export interface TokenizerInput {
     input: string;
@@ -10,7 +10,7 @@ export interface Token {
     tokenType: string;
     innerString: string;
 
-    highlight?: HighlightTokenTypes;
+    highlight?: HighlightTokenType;
 
     startPos: number;
     endPos: number;
@@ -22,7 +22,7 @@ export interface Position {
 }
 
 export function tokenize(input: TokenizerInput, tokenizers: TokenizeRuleModule[], ignoreRegex: RegExp = /^\s+/): Result<Token[], Position[]> {
-    const { input: inputString, fileName } = input;
+    const { input: inputString } = input;
     
     const tokens: Token[] = [];
     const errorPositions: Position[] = [];
@@ -43,7 +43,7 @@ export function tokenize(input: TokenizerInput, tokenizers: TokenizeRuleModule[]
 
         for (const rule of tokenizers) {
             const { tokenizer } = rule;
-            const match = tokenizer(inputString, index);
+            const match = tokenizer(input, index);
 
             if (match.is_ok()) {
                 const token = match.unwrap();

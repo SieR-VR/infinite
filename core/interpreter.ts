@@ -1,5 +1,5 @@
-import { Node } from "../core/parser";
-import { InterpretRuleModule } from "../rule/interpreter";
+import type { Node } from "../core/parser";
+import type { InterpretRuleModule } from "../rule/interpreter";
 
 export interface InterpreterInput {
     nodes: Node[];

@@ -1,5 +1,5 @@
-import { Node } from "../core/parser";
-import { ParseRuleModule } from "./parser";
+import type { Node } from "../core/parser";
+import type { ParseRuleModule } from "./parser";
 
 export interface TransformerOptions<NodeTypeString extends string> {
     nodeType: NodeTypeString;

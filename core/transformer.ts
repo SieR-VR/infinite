@@ -1,7 +1,7 @@
 import { Ok, Err, Result } from "ts-features";
 
-import { Node } from "./parser";
-import { Transformer, TransformerModule } from "../rule/transformer";
+import type { Node } from "./parser";
+import type { Transformer, TransformerModule } from "../rule/transformer";
 
 export interface TransformerInput {
     nodes: Node[];

@@ -2,6 +2,7 @@ import { Result, Ok, Err } from "ts-features";
 
 import type { Token } from "../core/tokenizer";
 import type { ParseRuleModule } from "../rule/parser";
+import type { HighlightTokenType } from "../rule/tokenizer";
 
 export interface ParserInput {
     tokens: Token[];
@@ -15,7 +16,7 @@ export interface Node {
     startPos: number;
     endPos: number;
     
-    semanticHighlight?: HighlightTokenTypes;
+    semanticHighlight?: HighlightTokenType;
     children: (Node | Node[])[];
 }
 
@@ -34,7 +35,7 @@ export type ParseRule<ParserContext, NodeType extends Node> = (
     input: ParserInput,
     index: number,
     getRule: ParseRuleGetter<ParserContext>,
-    semanticHighlight?: HighlightTokenTypes,
+    semanticHighlight?: HighlightTokenType,
     context?: ParserContext
 ) => Result<[NodeType, number], [ParseError[], number]>;
 
@@ -71,7 +72,7 @@ export function parse<ParserContext = any>(input: ParserInput, parsers: ParseRul
         const scopeErrors: ParseError[] = [];
 
         for (const module of modulesCanAppearInTopLevel) {
-            const result = module.parseRule(input, index, getRule, context);
+            const result = module.parseRule(input, index, getRule, undefined, context);
             if (result.is_ok()) {
                 const [node, nextIndex] = result.unwrap();
                 topLevelNodes.push(node);
@@ -112,12 +113,13 @@ function applyModuleMatches<ParserContext>(
         input: ParserInput,
         index: number,
         getRule: ParseRuleGetter<ParserContext>, 
+        semanticHighlight?: HighlightTokenType,
         context?: ParserContext
     ) => {
         const failResults: ParseError[] = [];
 
         for (const module of modules) {
-            const result = module.parseRule(input, index, getRule, context);
+            const result = module.parseRule(input, index, getRule, semanticHighlight, context);
             if (result.is_ok()) {
                 return result;
             }

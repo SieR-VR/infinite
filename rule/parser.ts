@@ -1,8 +1,9 @@
 import { Ok, Err, Result } from "ts-features";
-import { ParseRule, Node, ParseRuleGetter, ParseError } from "../core/parser";
-import { Token } from "../core/tokenizer"
 
-import { HighlightTokenTypes } from "./tokenizer";
+import type { ParseRule, Node, ParseRuleGetter, ParseError, ParserInput } from "../core/parser";
+import type { Token } from "../core/tokenizer"
+
+import type { HighlightTokenType } from "./tokenizer";
 
 interface ParseRuleToken {
     tokenType: string;
@@ -10,7 +11,7 @@ interface ParseRuleToken {
     isRepeatable?: boolean;
     isOptional?: boolean;
     determinedBy?: boolean;
-    semanticHighlight?: HighlightTokenTypes;
+    semanticHighlight?: HighlightTokenType;
 
     key?: never;
     role?: never;
@@ -26,7 +27,7 @@ interface ParseRuleCondition {
     isRepeatable?: boolean;
     isOptional?: boolean;
     determinedBy?: boolean;
-    semanticHighlight?: HighlightTokenTypes;
+    semanticHighlight?: HighlightTokenType;
 
     tokenType?: never;
     parseRule?: never;
@@ -39,7 +40,7 @@ interface ParseRuleFunction {
     isRepeatable?: boolean;
     isOptional?: boolean;
     determinedBy?: boolean;
-    semanticHighlight?: HighlightTokenTypes;
+    semanticHighlight?: HighlightTokenType;
 
     role?: never;
     tokenType?: never;
@@ -106,7 +107,9 @@ export function makeParseRuleModule<Elements extends readonly ParseRuleElement[]
         ParseRuleModule<ParserContext, NodeFromElements<Elements>, NodeTypeString> :
         never
 {
-    const module: ParseRule<ParserContext, Node> = (tokens, index, getRule, semanticHighlight) => {
+    const module: ParseRule<ParserContext, Node> = (input, index, getRule, semanticHighlight) => {
+        const { tokens } = input;
+
         const node: Node = {
             nodeType: options.nodeType,
             innerText: "",
@@ -192,7 +195,6 @@ export function makeParseRuleModule<Elements extends readonly ParseRuleElement[]
                     }
 
                     const [error, index] = result.unwrap_err();
-
                     return Err([[...errors, ...error], index]);
                 }
             }
@@ -205,7 +207,6 @@ export function makeParseRuleModule<Elements extends readonly ParseRuleElement[]
 
     return {
         ...options,
-        isTopLevel: options.isTopLevel ?? false,
         parseRule: module,
     } as any;
 }
@@ -277,8 +278,8 @@ function parseWith<T extends ParseRuleElement>(
     return result;
 }
 
-function parseWithCondition(tokens: Token[], nextIndex: number, getRule: ParseRuleGetter<any>, rule: ParseRuleCondition): Result<[Node, number], [ParseError[], number]> {
-    const result = getRule(rule.role, rule.condition)(tokens, nextIndex, getRule, rule.semanticHighlight);
+function parseWithCondition(input: ParserInput, nextIndex: number, getRule: ParseRuleGetter<any>, rule: ParseRuleCondition): Result<[Node, number], [ParseError[], number]> {
+    const result = getRule((p) => (rule.condition(p) && p.role === rule.role))(input, nextIndex, getRule, rule.semanticHighlight);
 
     if (result.is_ok()) {
         const [childNode, childIndex] = result.unwrap();
@@ -288,8 +289,8 @@ function parseWithCondition(tokens: Token[], nextIndex: number, getRule: ParseRu
     return result;
 }
 
-function parseWithParseRule(tokens: Token[], nextIndex: number, getRule: ParseRuleGetter<any>, rule: ParseRuleFunction): Result<[Node, number], [ParseError[], number]> {
-    const result = rule.parseRule(tokens, nextIndex, getRule, rule.semanticHighlight);
+function parseWithParseRule(input: ParserInput, nextIndex: number, getRule: ParseRuleGetter<any>, rule: ParseRuleFunction): Result<[Node, number], [ParseError[], number]> {
+    const result = rule.parseRule(input, nextIndex, getRule, rule.semanticHighlight);
 
     if (result.is_ok()) {
         const [childNode, childIndex] = result.unwrap();
