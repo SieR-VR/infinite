@@ -1,7 +1,7 @@
 import { Result, Ok, Err } from "ts-features";
 
-import { Token } from "../core/tokenizer";
-import { ParseRuleModule } from "../rule/parser";
+import type { Token } from "../core/tokenizer";
+import type { ParseRuleModule } from "../rule/parser";
 
 export interface ParserInput {
     tokens: Token[];
@@ -20,7 +20,7 @@ export interface Node {
 
 export interface ParseError {
     level: "critical" | "error" | "warning";
-    
+
     tried?: string[];
     expected?: string;
     actual?: string;
@@ -30,93 +30,55 @@ export interface ParseError {
 }
 
 export type ParseRule<ParserContext, NodeType extends Node> = (
-    tokens: Token[],
+    input: ParserInput,
     index: number,
     getRule: ParseRuleGetter<ParserContext>,
     context?: ParserContext
 ) => Result<[NodeType, number], [ParseError[], number]>;
 
-export type ParseRuleGetter<ParserContext> = (role: string, condition?: (p: ParseRuleModule<ParserContext, Node, string>) => boolean) => ParseRule<ParserContext, Node>;
+export type ParseRuleGetter<ParserContext> = (
+    condition: ParseRuleCondition<ParserContext>
+) => ParseRule<ParserContext, Node>;
+
+export type ParseRuleCondition<ParserContext> = (
+    module: ParseRuleModule<ParserContext, Node, string>
+) => boolean;
 
 export function parse<ParserContext = any>(input: ParserInput, parsers: ParseRuleModule<ParserContext, Node, string>[], makeContext: () => ParserContext): Result<Node[], ParseError[]> {
-    const { tokens, fileName } = input;
-    const nodes: Node[] = [];
-    const errors: ParseError[] = [];
-
-    const context = makeContext();
+    const topLevelNodes: Node[] = [];
+    const topLevelErrors: ParseError[] = [];
 
     const modulesSortedByPriority = parsers.sort((a, b) => a.priority - b.priority);
     const modulesCanAppearInTopLevel = modulesSortedByPriority.filter(m => m.isTopLevel);
 
-    const getRuleMap = (() => {
-        const rawMap = new Map<string, ParseRuleModule<ParserContext, Node, string>[]>();
+    const getRule: ParseRuleGetter<ParserContext> = (condition) => {
+        const modules = modulesSortedByPriority.filter(m => condition(m));
 
-        for (const module of modulesSortedByPriority) {
-            const { role } = module;
-            const rules = rawMap.get(role) || [];
-            rules.push(module);
-            rawMap.set(role, rules);
+        if (!modules.length) {
+            throw new Error(`No module matches the condition. Maybe it is parser issue.`);
         }
 
-        const map = new Map<string, (condition: (module: ParseRuleModule<ParserContext, Node, string>) => boolean) => ParseRule<ParserContext, Node>>();
-
-        for (const [role, modules] of rawMap) {
-            map.set(role, (condition: (module: ParseRuleModule<ParserContext, Node, string>) => boolean) => (tokens, index, getRule) => {
-                const filteredModules = modules.filter(condition);
-                const failResults: ParseError[] = [];
-
-                if (filteredModules.length === 0) {
-                    throw new Error(`No rule for role ${role} found`);
-                }
-
-                for (const module of filteredModules) {
-                    const result = module.parseRule(tokens, index, getRule, context);
-                    if (result.is_ok()) {
-                        return result;
-                    }
-
-                    const [failResultsScope] = result.unwrap_err();
-                    failResults.push(...(failResultsScope.map(failResult => ({
-                        ...failResult,
-                        tried: failResult.tried ? failResult.tried.map((s) => `${s}/${module.nodeType}`) : [module.nodeType],
-                    }))));
-                }
-
-                return Err([failResults, index]);
-            });
-        }
-
-        return map;
-    })();
-
-
-    const getRule = (role: string, condition?: (module: ParseRuleModule<ParserContext, Node, string>) => boolean): ParseRule<ParserContext, Node> => {
-        const rule = getRuleMap.get(role);
-        if (!rule) {
-            throw new Error(`Rule for role ${role} not found`);
-        }
-        return rule(condition || (() => true));
+        return applyModuleMatches(modules);
     }
 
+    const context = makeContext();
+
     let index = 0;
-    while (index < tokens.length) {
+    while (index < input.tokens.length) {
         let matched = false;
         const scopeErrors: ParseError[] = [];
 
         for (const module of modulesCanAppearInTopLevel) {
-            const result = module.parseRule(tokens, index, getRule, context);
+            const result = module.parseRule(input, index, getRule, context);
             if (result.is_ok()) {
                 const [node, nextIndex] = result.unwrap();
-                nodes.push(node);
+                topLevelNodes.push(node);
                 index = nextIndex;
                 matched = true;
                 break;
             }
             else {
                 const [error, nextIndex] = result.unwrap_err();
-                
-                if (error[error.length - 1].level === "critical")
-                    return Err(error);
 
                 index = nextIndex;
                 scopeErrors.push(...error);
@@ -127,17 +89,49 @@ export function parse<ParserContext = any>(input: ParserInput, parsers: ParseRul
 
         if (!matched) {
             if (scopeErrors.length) {
-                errors.push(...scopeErrors);
+                topLevelErrors.push(...scopeErrors);
             }
 
-            return Err(errors);
+            return Err(topLevelErrors);
         }
     }
 
-    if (errors.length) {
-        return Err(errors);
+    if (topLevelErrors.length) {
+        return Err(topLevelErrors);
     }
 
-    return Ok(nodes);
+    return Ok(topLevelNodes);
 }
 
+function applyModuleMatches<ParserContext>(
+    modules: ParseRuleModule<ParserContext, Node, string>[],
+): ParseRule<ParserContext, Node> {
+    return (
+        input: ParserInput,
+        index: number,
+        getRule: ParseRuleGetter<ParserContext>, 
+        context?: ParserContext
+    ) => {
+        const failResults: ParseError[] = [];
+
+        for (const module of modules) {
+            const result = module.parseRule(input, index, getRule, context);
+            if (result.is_ok()) {
+                return result;
+            }
+
+            const [scopeFailResults] = result.unwrap_err();
+
+            failResults.push(...(scopeFailResults.map(failResult => ({
+                ...failResult,
+                tried: failResult.tried ? triedPaths(module.nodeType)(failResult.tried) : [module.nodeType],
+            }))));
+        }
+
+        return Err([failResults, index]);
+    }
+
+    function triedPaths(current: string): (detail: string[]) => string[] {
+        return (paths: string[]) => paths.map(path => `${current}/${path}`);
+    }
+}
