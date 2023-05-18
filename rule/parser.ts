@@ -17,6 +17,7 @@ interface ParseRuleToken {
     role?: never;
     condition?: never;
     parseRule?: never;
+    composition?: never;
 }
 
 interface ParseRuleCondition {
@@ -31,6 +32,7 @@ interface ParseRuleCondition {
 
     tokenType?: never;
     parseRule?: never;
+    composition?: never;
 }
 
 interface ParseRuleFunction {
@@ -45,10 +47,25 @@ interface ParseRuleFunction {
     role?: never;
     tokenType?: never;
     condition?: never;
+    composition?: never;
 }
 
+interface ParseRuleComposite {
+    key: string;
+    composition: ParseRuleElement[];
 
-type ParseRuleElement = ParseRuleToken | ParseRuleCondition | ParseRuleFunction;
+    isRepeatable?: boolean;
+    isOptional?: boolean;
+    determinedBy?: boolean;
+    semanticHighlight?: HighlightTokenType;
+
+    role?: never;
+    tokenType?: never;
+    condition?: never;
+    parseRule?: never;
+}
+
+type ParseRuleElement = ParseRuleToken | ParseRuleCondition | ParseRuleFunction | ParseRuleComposite;
 
 export interface ParseRuleOptions<NodeTypeString extends string> {
     role: string;
@@ -199,6 +216,39 @@ export function makeParseRuleModule<Elements extends readonly ParseRuleElement[]
                 }
             }
 
+            if (isParseRuleComposite(rule)) {
+                const compositeModule = makeParseRuleModule({ 
+                    nodeType: "__Composition", 
+                    role: "__Composition",
+                    priority: 0,
+                    isTopLevel: false,
+                }, rule.composition);
+
+                const result = compositeModule.parseRule(input, nextIndex, getRule, semanticHighlight);
+
+                if (result.is_ok()) {
+                    const [childNode, childIndex] = result.unwrap();
+
+                    node.children.push(childNode);
+                    node.innerText += childNode.innerText;
+                    node.endPos = childNode.endPos;
+                    (node as any)[rule.key] = childNode;
+
+                    nextIndex = childIndex;
+                    if (rule.determinedBy) {
+                        determined = true;
+                    }
+
+                    continue;
+                }
+                else if (rule.isOptional) {
+                    continue;
+                }
+
+                const [error, index] = result.unwrap_err();
+                return Err([[...errors, ...error], index]);
+            }
+
             throw new Error(`Invalid parse rule: ${rule}/${options.nodeType}`);
         }
 
@@ -221,6 +271,10 @@ function isParseRuleCondition(rule: ParseRuleElement): rule is ParseRuleConditio
 
 function isParseRule(rule: ParseRuleElement): rule is ParseRuleFunction {
     return "parseRule" in rule;
+}
+
+function isParseRuleComposite(rule: ParseRuleElement): rule is ParseRuleComposite {
+    return "composition" in rule;
 }
 
 function parseRepeatableWith<T extends ParseRuleElement>(
