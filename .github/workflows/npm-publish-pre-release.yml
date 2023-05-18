@@ -40,7 +40,7 @@ jobs:
           registry-url: https://registry.npmjs.org/
           
       - name: Automated Version Bump
-        run: npm version prerelease --preid=pre
+        run: npm version prerelease --preid=pre --no-git-tag-version
           
       - run: npm publish
         env:
