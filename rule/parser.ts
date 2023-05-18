@@ -52,7 +52,7 @@ interface ParseRuleFunction {
 
 interface ParseRuleComposite {
     key: string;
-    composition: ParseRuleElement[];
+    composition: readonly ParseRuleElement[];
 
     isRepeatable?: boolean;
     isOptional?: boolean;
