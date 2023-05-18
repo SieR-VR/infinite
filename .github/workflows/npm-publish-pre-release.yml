@@ -8,7 +8,7 @@ on:
 
 jobs:
   publish:
-    environment: npm_token
+    environment: npm_sier_vr
     permissions:
       contents: write
     runs-on: ubuntu-latest
