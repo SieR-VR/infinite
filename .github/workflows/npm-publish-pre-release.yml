@@ -20,6 +20,11 @@ jobs:
         with:
           node-version: 16
           registry-url: https://registry.npmjs.org/
+      
+      - name: Register git user
+        run: |
+          git config --global user.email "nwh040512@gmail.com"
+          git config --global user.name "SieR-VR"
           
       - name: Run install
         uses: borales/actions-yarn@v4
