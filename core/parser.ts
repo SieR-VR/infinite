@@ -51,7 +51,7 @@ export function parse<ParserContext = any>(input: ParserInput, parsers: ParseRul
     const topLevelNodes: Node[] = [];
     const topLevelErrors: ParseError[] = [];
 
-    const modulesSortedByPriority = parsers.sort((a, b) => a.priority - b.priority);
+    const modulesSortedByPriority = parsers.sort((a, b) => b.priority - a.priority);
     const modulesCanAppearInTopLevel = modulesSortedByPriority.filter(m => m.isTopLevel);
 
     const getRule: ParseRuleGetter<ParserContext> = (condition) => {
