@@ -1,12 +1,11 @@
 import { Ok, Err, Result } from "ts-features";
 
 import type { ParseRule, Node, ParseRuleGetter, ParseError, ParserInput } from "../core/parser";
-import type { Token } from "../core/tokenizer"
 
 import type { HighlightTokenType } from "./tokenizer";
-import { Equals } from "./util";
+import type { Equals } from "./util";
 
-interface ParseRuleToken {
+export interface ParseRuleToken {
     tokenType: string;
 
     isRepeatable?: boolean;
@@ -21,11 +20,11 @@ interface ParseRuleToken {
     composition?: never;
 }
 
-interface ParseRuleCondition<RoleString extends string = string, NodeTypeString extends string = string>{
+export interface ParseRuleCondition<RoleString extends string = string, NodeTypeString extends string = string>{
     key: string;
-    role: RoleString;
-    nodeType: NodeTypeString;
-    condition: (p: ParseRuleOptions<RoleString, NodeTypeString>) => boolean;
+    role?: RoleString;
+    nodeType?: NodeTypeString;
+    condition?: (p: ParseRuleOptions<RoleString, NodeTypeString>) => boolean;
 
     isRepeatable?: boolean;
     isOptional?: boolean;
@@ -37,7 +36,7 @@ interface ParseRuleCondition<RoleString extends string = string, NodeTypeString 
     composition?: never;
 }
 
-interface ParseRuleFunction {
+export interface ParseRuleFunction {
     key: string;
     parseRule: ParseRule<any, Node>;
 
@@ -52,7 +51,7 @@ interface ParseRuleFunction {
     composition?: never;
 }
 
-interface ParseRuleComposite {
+export interface ParseRuleComposite {
     key: string;
     composition: readonly ParseRuleElement[];
 
@@ -67,7 +66,7 @@ interface ParseRuleComposite {
     parseRule?: never;
 }
 
-type ParseRuleElement = ParseRuleToken | ParseRuleCondition | ParseRuleFunction | ParseRuleComposite;
+export type ParseRuleElement = ParseRuleToken | ParseRuleCondition | ParseRuleFunction | ParseRuleComposite;
 
 export interface ParseRuleOptions<RoleString extends string, NodeTypeString extends string> {
     role: RoleString;
@@ -84,7 +83,7 @@ export interface ParseRuleModule<ParserContext, NodeType extends Node, RoleStrin
     parseRule: ParseRule<ParserContext, NodeType>;
 }
 
-type AssembleElements<Modules extends readonly ParseRuleModule<any, any, any, any>[], CurrentKey extends string, TargetNode, RestElements extends ParseRuleElement[]> =
+export type AssembleElements<Modules extends readonly ParseRuleModule<any, any, any, any>[], CurrentKey extends string, TargetNode, RestElements extends ParseRuleElement[]> =
     {
         [key in (CurrentKey | keyof BaseNodeFromElements<Modules, RestElements>)]: 
             key extends CurrentKey ?
@@ -94,7 +93,7 @@ type AssembleElements<Modules extends readonly ParseRuleModule<any, any, any, an
                 never;
     };
 
-type BaseNodeFromElements<Modules extends readonly ParseRuleModule<any, any, any, any>[], Elements extends readonly ParseRuleElement[]> = 
+export type BaseNodeFromElements<Modules extends readonly ParseRuleModule<any, any, any, any>[], Elements extends readonly ParseRuleElement[]> = 
     Elements extends readonly [infer First, ...infer Rest] ?
         Rest extends ParseRuleElement[] ?
             First extends ParseRuleToken ?
@@ -115,16 +114,16 @@ type BaseNodeFromElements<Modules extends readonly ParseRuleModule<any, any, any
         never :
     {};
 
-type SerachNodeWithNodeType<Modules extends readonly ParseRuleModule<any, any, any, any>[], NodeTypeString extends string> =
+export type SerachNodeWithNodeType<Modules extends readonly ParseRuleModule<any, any, any, any>[], NodeTypeString extends string> =
     Modules extends readonly [infer First, ...infer Rest] ?
         First extends ParseRuleModule<any, infer NodeType, any, NodeTypeString> ?
             NodeType :
         Rest extends readonly ParseRuleModule<any, any, any, any>[] ?
             SerachNodeWithNodeType<Rest, NodeTypeString> :
         never :
-    never;
+    Node;
 
-type SearchNodeWithRole<Modules extends readonly ParseRuleModule<any, any, any, any>[], RoleString extends string> =
+export type SearchNodeWithRole<Modules extends readonly ParseRuleModule<any, any, any, any>[], RoleString extends string> =
     Modules extends readonly [infer First, ...infer Rest] ?
         First extends ParseRuleModule<any, infer NodeType, infer Role, any> ?
             Role extends RoleString ?
@@ -133,11 +132,13 @@ type SearchNodeWithRole<Modules extends readonly ParseRuleModule<any, any, any, 
                 never :
             never :
         never :
-    never;
+    Node;
 
-type SearchNodeWith<Modules extends readonly ParseRuleModule<any, any, any, any>[], RoleString extends string, NodeTypeString extends string = string> =
-    Equals<string, NodeTypeString> extends false ?
-        SerachNodeWithNodeType<Modules, NodeTypeString> :   
+export type SearchNodeWith<Modules extends readonly ParseRuleModule<any, any, any, any>[], RoleString, NodeTypeString> =
+    Equals<unknown, NodeTypeString> extends false ?
+        NodeTypeString extends string ?
+            SerachNodeWithNodeType<Modules, NodeTypeString> :
+        never :
     RoleString extends string ?
         SearchNodeWithRole<Modules, RoleString> :
     never;
@@ -150,8 +151,7 @@ export type NodeFromElements<Modules extends readonly ParseRuleModule<any, any, 
             key extends keyof Node ?
                 Node[key] :
                 never;
-    }
-
+    };
 
 export function makeParseRuleModule<
     Modules extends readonly ParseRuleModule<any, any, any, any>[], 
@@ -411,7 +411,11 @@ function parseWith<T extends ParseRuleElement>(
 }
 
 function parseWithCondition(input: ParserInput, nextIndex: number, getRule: ParseRuleGetter<any>, rule: ParseRuleCondition): Result<[Node, number], [ParseError[], number]> {
-    const result = getRule((p) => (rule.condition(p) && p.role === rule.role))(input, nextIndex, getRule, rule.semanticHighlight);
+    const result = getRule((p) => (
+        (rule.condition ? rule.condition(p) : true) &&
+        p.role === rule.role &&
+        p.nodeType === rule.nodeType
+    ))(input, nextIndex, getRule, rule.semanticHighlight);
 
     if (result.is_ok()) {
         const [childNode, childIndex] = result.unwrap();
